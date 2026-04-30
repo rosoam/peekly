@@ -1023,6 +1023,235 @@ export const overlayCss = `
 
 .tt-cls-val { color: #d4d4d4; word-break: break-word; }
 
+/* ─── DOM tab — rich HTML rendering ───────────────────────────────── */
+
+.tt-html {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  position: relative;
+}
+
+.tt-html-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+
+.tt-html-bracket {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.tt-html-tag {
+  color: #c7d2fe;
+  font-weight: 600;
+  user-select: text;
+  cursor: text;
+}
+
+.tt-html-attrs {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-left: 14px;
+  margin-top: 2px;
+}
+
+.tt-html-attr {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  user-select: text;
+  cursor: text;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.tt-html-attr::-webkit-scrollbar { height: 3px; }
+.tt-html-attr::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+.tt-html-attr::-webkit-scrollbar-track { background: transparent; }
+
+.tt-html-attr-name {
+  color: #fbbf24;
+}
+
+.tt-html-attr-eq,
+.tt-html-attr-quote {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.tt-html-attr-value {
+  color: #86efac;
+}
+
+.tt-html-close {
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 1px;
+}
+
+.tt-html-close-tag {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  user-select: text;
+  cursor: text;
+  padding-top: 4px;
+}
+
+.tt-html-copy {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 100ms ease, color 100ms ease, border-color 100ms ease;
+}
+
+.tt-html-copy:hover {
+  background: rgba(99, 102, 241, 0.18);
+  color: #c7d2fe;
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+/* Children list — clickable to navigate */
+
+.tt-dom-children {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-left: 14px;
+}
+
+.tt-dom-child {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgba(255, 255, 255, 0.85);
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 4px;
+  transition: background 80ms ease, border-color 80ms ease, color 80ms ease;
+  width: 100%;
+}
+
+.tt-dom-child:hover {
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.3);
+  color: #fef3c7;
+}
+
+.tt-dom-child-arrow {
+  color: rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+
+.tt-dom-child-sel {
+  color: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tt-dom-up {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.65);
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  text-align: left;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 5px;
+  transition: background 80ms ease, border-color 80ms ease, color 80ms ease;
+  width: 100%;
+  margin-bottom: 2px;
+}
+
+.tt-dom-up:hover {
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.25);
+  color: #fef3c7;
+}
+
+.tt-dom-up-arrow {
+  color: rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.tt-dom-up-sel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tt-dom-text {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: #d4d4d4;
+  margin-left: 14px;
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 4px;
+  user-select: text;
+  cursor: text;
+  word-break: break-word;
+  max-height: 90px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.tt-dom-text::-webkit-scrollbar { width: 3px; }
+.tt-dom-text::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+.tt-dom-empty {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.3);
+  font-style: italic;
+  margin-left: 14px;
+}
+
+.tt-dom-more {
+  font-family: ui-sans-serif, sans-serif;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-left: 14px;
+  margin-top: 2px;
+  font-style: italic;
+}
+
 /* ─── Toast ───────────────────────────────────────────────────────── */
 
 .toast {

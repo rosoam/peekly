@@ -111,7 +111,52 @@ previewHighlight.className = 'preview-highlight';
 shadow.append(previewHighlight);
 
 // Contextual tooltip (Option + Shift hover).
-const tooltip: TooltipState = createTooltip(shadow, () => state.settings.editor);
+// Forward-declared because the tooltip's navigate/preview callbacks need to
+// reach into module-level helpers defined later (e.g. requestHover, showPreviewHighlight).
+function navigateTooltipToElement(target: Element): void {
+  tooltipTargetEl = target;
+  tooltip.setPinned(true);
+  // Show synchronous preview from DOM right away
+  tooltip.update({ preview: previewFromCache(target), targetEl: target, cursor: null });
+  // Then refine with bridge data
+  void requestHover(target).then((res) => {
+    if (tooltipTargetEl !== target) return;
+    if (res.ok && res.preview) {
+      tooltip.update({ preview: res.preview, targetEl: target, cursor: null });
+    }
+  });
+  // Paint amber preview around the new target so the user sees where they navigated
+  const r = target.getBoundingClientRect();
+  showPreviewHighlight({ x: r.left, y: r.top, width: r.width, height: r.height });
+  lastPreviewedFiberId = `tooltip-nav-${Math.random().toString(36).slice(2)}`;
+  // Auto-fade after 2.5s (user's eye has caught up by then)
+  window.setTimeout(() => {
+    if (tooltipTargetEl === target) clearPreviewHighlight();
+  }, 2500);
+}
+
+function previewElementInPage(target: Element | null): void {
+  if (!target) {
+    clearPreviewHighlight();
+    lastPreviewedFiberId = null;
+    return;
+  }
+  const r = target.getBoundingClientRect();
+  showPreviewHighlight({ x: r.left, y: r.top, width: r.width, height: r.height });
+  lastPreviewedFiberId = `tooltip-hover-${Math.random().toString(36).slice(2)}`;
+}
+
+const tooltip: TooltipState = createTooltip(shadow, {
+  getEditor: () => state.settings.editor,
+  onNavigateToElement: navigateTooltipToElement,
+  onPreviewElement: previewElementInPage,
+  onCopyText: (text) => {
+    void navigator.clipboard.writeText(text).then(
+      () => showToast(shadow, 'Copied'),
+      () => showToast(shadow, 'Copy failed'),
+    );
+  },
+});
 
 function attachHost(): void {
   if (host.isConnected) return;

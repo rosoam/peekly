@@ -208,60 +208,197 @@ function renderCompTab(body: HTMLElement, p: ComponentPreview, editor: EditorId)
   }
 }
 
-function renderDomTab(body: HTMLElement, p: ComponentPreview, el: Element | null): void {
+function selectorOf(el: Element): string {
+  const tag = el.tagName.toLowerCase();
+  const id = el.id ? `#${el.id}` : '';
+  const className = (el.getAttribute('class') ?? '').trim();
+  let cls = '';
+  if (className) {
+    const parts = className.split(/\s+/).filter(Boolean);
+    const joined = '.' + parts.join('.');
+    cls = joined.length > 28 ? joined.slice(0, 27) + '…' : joined;
+  }
+  return `<${tag}${id}${cls}>`;
+}
+
+function buildOpenTag(el: Element, copyOuterHtml: () => void): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'tt-html';
+
+  const head = document.createElement('div');
+  head.className = 'tt-html-head';
+
+  const lt = document.createElement('span');
+  lt.className = 'tt-html-bracket';
+  lt.textContent = '<';
+
+  const tagName = document.createElement('span');
+  tagName.className = 'tt-html-tag';
+  tagName.textContent = el.tagName.toLowerCase();
+
+  head.append(lt, tagName);
+
+  const attrs = Array.from(el.attributes);
+  if (attrs.length === 0) {
+    const close = document.createElement('span');
+    close.className = 'tt-html-bracket';
+    close.textContent = '>';
+    head.append(close);
+    wrap.append(head);
+  } else {
+    wrap.append(head);
+    const attrsList = document.createElement('div');
+    attrsList.className = 'tt-html-attrs';
+    for (const a of attrs) {
+      attrsList.append(buildAttr(a.name, a.value));
+    }
+    wrap.append(attrsList);
+
+    const closeRow = document.createElement('div');
+    closeRow.className = 'tt-html-close';
+    closeRow.textContent = '>';
+    wrap.append(closeRow);
+  }
+
+  // Copy outerHTML icon button at top-right of the open tag
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'tt-html-copy';
+  copyBtn.title = 'Copy outerHTML';
+  copyBtn.textContent = 'Copy';
+  copyBtn.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    copyOuterHtml();
+  });
+  head.append(copyBtn);
+
+  return wrap;
+}
+
+function buildAttr(name: string, value: string): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'tt-html-attr';
+  const k = document.createElement('span');
+  k.className = 'tt-html-attr-name';
+  k.textContent = name;
+  const eq = document.createElement('span');
+  eq.className = 'tt-html-attr-eq';
+  eq.textContent = '=';
+  const q1 = document.createElement('span');
+  q1.className = 'tt-html-attr-quote';
+  q1.textContent = '"';
+  const v = document.createElement('span');
+  v.className = 'tt-html-attr-value';
+  v.textContent = value;
+  v.title = value;
+  const q2 = document.createElement('span');
+  q2.className = 'tt-html-attr-quote';
+  q2.textContent = '"';
+  row.append(k, eq, q1, v, q2);
+  return row;
+}
+
+function buildChildRow(child: Element, onNavigate: (el: Element) => void, onPreview: (el: Element | null) => void): HTMLElement {
+  const row = document.createElement('button');
+  row.type = 'button';
+  row.className = 'tt-dom-child';
+  const arrow = document.createElement('span');
+  arrow.className = 'tt-dom-child-arrow';
+  arrow.textContent = '↳';
+  const sel = document.createElement('span');
+  sel.className = 'tt-dom-child-sel';
+  sel.textContent = selectorOf(child);
+  sel.title = `Click to inspect ${child.tagName.toLowerCase()}${child.id ? `#${child.id}` : ''}`;
+  row.append(arrow, sel);
+  row.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    onNavigate(child);
+  });
+  row.addEventListener('mouseenter', () => onPreview(child));
+  row.addEventListener('mouseleave', () => onPreview(null));
+  return row;
+}
+
+function renderDomTab(
+  body: HTMLElement,
+  _p: ComponentPreview,
+  el: Element | null,
+  onNavigate: (el: Element) => void,
+  onPreview: (el: Element | null) => void,
+  onCopy: (text: string) => void,
+): void {
   body.replaceChildren();
 
-  if (p.ownerNames.length > 0) {
-    const chain = document.createElement('div');
-    chain.className = 'tt-chain';
-    const reversed = [...p.ownerNames].reverse();
-    for (const n of reversed) {
-      const li = document.createElement('div');
-      li.className = 'tt-chain-row';
-      const mark = document.createElement('span');
-      mark.className = 'tt-chain-mark';
-      mark.textContent = '↑';
-      const nameEl = document.createElement('span');
-      nameEl.textContent = n;
-      li.append(mark, nameEl);
-      chain.append(li);
-    }
-    body.append(chain);
+  if (!el) {
+    const empty = document.createElement('div');
+    empty.className = 'tt-empty';
+    empty.textContent = 'No element to inspect.';
+    body.append(empty);
+    return;
   }
 
-  // Current
-  const cur = document.createElement('div');
-  cur.className = 'tt-current';
-  const tagText = `<${p.domTag}${p.elementId ? `#${p.elementId}` : ''}>`;
-  const curMark = document.createElement('span');
-  curMark.className = 'tt-cur-mark';
-  curMark.textContent = '●';
-  const curName = document.createElement('span');
-  curName.className = 'tt-cur-name';
-  curName.textContent = p.name === p.domTag ? tagText : p.name;
-  cur.append(curMark, curName);
-  if (p.name !== p.domTag) {
-    const curTag = document.createElement('span');
-    curTag.className = 'tt-cur-tag';
-    curTag.textContent = tagText;
-    cur.append(curTag);
+  // Up navigation — go to parent element
+  if (el.parentElement && el.parentElement !== document.body && el.parentElement !== document.documentElement) {
+    const upRow = document.createElement('button');
+    upRow.type = 'button';
+    upRow.className = 'tt-dom-up';
+    const upArrow = document.createElement('span');
+    upArrow.className = 'tt-dom-up-arrow';
+    upArrow.textContent = '↑';
+    const upSel = document.createElement('span');
+    upSel.className = 'tt-dom-up-sel';
+    upSel.textContent = `parent: ${selectorOf(el.parentElement)}`;
+    upRow.append(upArrow, upSel);
+    upRow.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      onNavigate(el.parentElement!);
+    });
+    upRow.addEventListener('mouseenter', () => onPreview(el.parentElement!));
+    upRow.addEventListener('mouseleave', () => onPreview(null));
+    body.append(upRow);
   }
-  body.append(cur);
 
-  // DOM-level info
-  if (el) {
-    const childCount = el.children.length;
-    const text = (el.textContent ?? '').trim().length;
-    const meta = document.createElement('div');
-    meta.className = 'tt-meta-grid';
-    meta.append(buildKv('children', String(childCount)));
-    if (text > 0) meta.append(buildKv('text len', String(text)));
-    if (el.parentElement) {
-      const sibIdx = Array.from(el.parentElement.children).indexOf(el) + 1;
-      meta.append(buildKv('sibling', `${sibIdx} of ${el.parentElement.children.length}`));
+  // Open tag with attributes (selectable, scrollable values)
+  body.append(buildOpenTag(el, () => onCopy(el.outerHTML)));
+
+  // Children navigation OR inline text content
+  if (el.children.length > 0) {
+    const list = document.createElement('div');
+    list.className = 'tt-dom-children';
+    const max = 12;
+    const shown = Array.from(el.children).slice(0, max);
+    for (const child of shown) {
+      list.append(buildChildRow(child, onNavigate, onPreview));
     }
-    body.append(meta);
+    body.append(list);
+    if (el.children.length > max) {
+      const more = document.createElement('div');
+      more.className = 'tt-dom-more';
+      more.textContent = `+${el.children.length - max} more`;
+      body.append(more);
+    }
+  } else {
+    const text = (el.textContent ?? '').trim();
+    if (text) {
+      const t = document.createElement('div');
+      t.className = 'tt-dom-text';
+      const truncated = text.length > 200 ? text.slice(0, 200) + '…' : text;
+      t.textContent = `"${truncated}"`;
+      t.title = text;
+      body.append(t);
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'tt-dom-empty';
+      empty.textContent = '(empty)';
+      body.append(empty);
+    }
   }
+
+  // Closing tag
+  const closeTag = document.createElement('div');
+  closeTag.className = 'tt-html-close-tag';
+  closeTag.textContent = `</${el.tagName.toLowerCase()}>`;
+  body.append(closeTag);
 }
 
 function renderCssTab(body: HTMLElement, p: ComponentPreview, el: Element | null): void {
@@ -389,10 +526,18 @@ function positionTooltip(el: HTMLElement, anchor: { x: number; y: number }): voi
 
 // ─── Public factory ──────────────────────────────────────────────────
 
+export type CreateTooltipOptions = {
+  getEditor: () => EditorId;
+  onNavigateToElement: (el: Element) => void;
+  onPreviewElement: (el: Element | null) => void;
+  onCopyText: (text: string) => void;
+};
+
 export function createTooltip(
   shadow: ShadowRoot,
-  getEditor: () => EditorId,
+  opts: CreateTooltipOptions,
 ): TooltipState {
+  const { getEditor, onNavigateToElement, onPreviewElement, onCopyText } = opts;
   const el = document.createElement('div');
   el.className = 'tooltip';
   el.style.display = 'none';
@@ -450,7 +595,7 @@ export function createTooltip(
         renderCompTab(body, lastPreview, getEditor());
         break;
       case 'dom':
-        renderDomTab(body, lastPreview, lastEl);
+        renderDomTab(body, lastPreview, lastEl, onNavigateToElement, onPreviewElement, onCopyText);
         break;
       case 'css':
         renderCssTab(body, lastPreview, lastEl);
