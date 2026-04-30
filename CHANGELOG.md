@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-04-30
+
 ### Added
 
 - **Multi-framework support** — Peekly is no longer React-only. Eight framework adapters dispatch invisibly:
@@ -19,30 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Twig** (Symfony with `twig.debug: true`) — parses `<!-- BEGIN templates/x.html.twig -->` debug comments to attribute server-rendered HTML to its source template. The "Open in editor" button jumps directly to the template file. Nested templates produce a meaningful "Rendered by" chain. No PHP-side cooperation required — just enable Twig debug.
   - **Plain DOM fallback** — works on *any* HTML page even without a framework. Surfaces tag name, HTML attributes as "props", ancestor chain, parent/children DOM elements. Designed so Peekly is useful on WordPress, vanilla PHP, plain HTML, anything else.
 
-  Detection is **invisible**: the user never sees "framework: X". The panel and tooltip just show the right data for whatever they hover. The adapter chain tries each framework in priority order (React → Preact → Vue 3 → … → Plain DOM) and uses the first one that recognizes the element.
-
-- **DOM tab v2** in the contextual tooltip — full rich HTML rendering:
-  - opening tag with attributes formatted line-by-line, every value selectable and horizontally scrollable
-  - parent up-button (`↑ parent: <selector>`)
-  - children list with click-to-navigate (drill into child elements without leaving the tooltip)
-  - hover-preview overlay (amber dashed) when hovering a child or parent row
-  - "Copy" button — copies the element's `outerHTML`
-  - text content preview for leaf elements
-  - works for any element on any page (uses Plain DOM adapter when no framework matches)
-
-- New documentation: [`docs/MULTI_FRAMEWORK_AUDIT.md`](docs/MULTI_FRAMEWORK_AUDIT.md) — feasibility analysis, framework prioritization (Vue 3 / Preact / Lit / Livewire / Stimulus / Vue 2 / Angular), adapter architecture proposal, dedicated PHP / Laravel / Symfony / Twig / Livewire section.
-
-### Changed
-
-- The MAIN-world bridge (`src/injected/bridge.ts`) is now a thin orchestrator over pluggable `FrameworkAdapter` modules under `src/injected/adapters/`. Each adapter exports a single object implementing `recognizes` / `inspect` / `preview` / `resolveById` / `componentRect` / `findInstancesOfSameType` / `subscribeRenders` (optional).
-
-## [0.2.0] - 2026-04-30
-
-### Added
+  Detection is **invisible**: the user never sees "framework: X". The panel and tooltip just show the right data for whatever they hover. The adapter chain tries each framework in priority order (React → Preact → Vue 3 → Livewire → Lit → Alpine → Twig → Plain DOM) and uses the first one that recognizes the element.
 
 - **Contextual tooltip** — hold `Option + Shift` and hover any element to get a near-cursor floating tooltip with tabs:
   - **Comp** — component name, kind, source path (clickable to open in editor), parent name, children count, prop names
-  - **DOM** — owner chain, current node tag/id, children count, sibling index
+  - **DOM** — full rich HTML view: opening tag formatted line-by-line with selectable, horizontally scrollable attribute values; parent up-button; children list with click-to-navigate (drill into child elements without leaving the tooltip); amber preview overlay on hover; "Copy" button for `outerHTML`; text content preview for leaves
   - **CSS** — display, position, size, z-index, background (resolved hex), color, font, plus full Tailwind / UnoCSS class breakdown grouped by variant
   - **A11y** — quick warnings (missing alt, accessible name, label, contrast) with red badge
 
@@ -52,6 +35,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Quick analysis with `Option` only** is unchanged: still highlights the component with a label.
 
+- New documentation:
+  - [`docs/MULTI_FRAMEWORK_AUDIT.md`](docs/MULTI_FRAMEWORK_AUDIT.md) — feasibility analysis, framework prioritization (Vue 3 / Preact / Lit / Livewire / Stimulus / Vue 2 / Angular), adapter architecture proposal, dedicated PHP / Laravel / Symfony / Twig / Livewire section
+  - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — technical deep-dive
+  - [`docs/CHROME_WEB_STORE.md`](docs/CHROME_WEB_STORE.md) — submission guide
+  - [`SECURITY.md`](SECURITY.md) — disclosure policy + threat model + audit history
+  - [`RELEASING.md`](RELEASING.md) — automated release flow
+
 ### Changed
 
 - **Tighter hover targeting.** The highlight now follows the precise DOM element under the cursor instead of the component's full bounding box, which previously made small text spans inside large components feel imprecise. The component name still shows in the label as `Component · <tag>`.
@@ -59,6 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Selectable, scrollable values everywhere.** Removed the 2-line clamp / ellipsis on prop values. Long values stay on a single line with horizontal scroll (custom thin scrollbar) and `user-select: text` for precise text selection. Same treatment for computed styles, Tailwind class lists, and source paths.
 - Custom thin scrollbars throughout the panel for a more native dev-tool feel.
 - Navigation chip / parent row hover states use amber to visually link with the in-page preview overlay.
+- The MAIN-world bridge (`src/injected/bridge.ts`) is now a thin orchestrator over pluggable `FrameworkAdapter` modules under `src/injected/adapters/`. Each adapter exports a single object implementing `recognizes` / `inspect` / `preview` / `resolveById` / `componentRect` / `findInstancesOfSameType` / `subscribeRenders` (optional).
+- Refined icon — partial arc (300°) with rounded caps, inner viewfinder detail, subtle radial background gradient. Same lime + dark palette, more depth and identity.
 
 ### Removed
 
