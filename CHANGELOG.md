@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-04-30
+
 ### Added
 
 - **Contextual tooltip** — hold `Option + Shift` and hover any element to get a near-cursor floating tooltip with tabs:
@@ -66,3 +68,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MIT license, MV3 manifest, English docs, CI on push and PR.
 
 [0.1.0]: https://github.com/rosoam/peekly/releases/tag/v0.1.0
+[0.2.0]: https://github.com/rosoam/peekly/releases/tag/v0.2.0

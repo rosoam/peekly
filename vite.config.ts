@@ -4,7 +4,7 @@ import { crx, defineManifest } from '@crxjs/vite-plugin';
 const manifest = defineManifest({
   manifest_version: 3,
   name: 'Peekly',
-  version: '0.1.0',
+  version: '0.2.0',
   description:
     'Hold Option / Alt and click to peek at any React component, DOM element, or CSS — on any site.',
   homepage_url: 'https://github.com/rosoam/peekly',

@@ -1,6 +1,6 @@
 {
   "name": "peekly",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Hold Option / Alt and click to peek at any React component, DOM element, or CSS — fast, seamless, on any site.",
   "private": true,
   "type": "module",
