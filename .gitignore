@@ -4,3 +4,13 @@ dist/
 .DS_Store
 *.log
 .vite/
+
+# Demo workspace artifacts
+demo/node_modules/
+demo/dist/
+demo/.vite/
+
+# Playwright + screenshots
+.pw-profile/
+screenshots/
+playwright-report/
