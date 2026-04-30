@@ -7,6 +7,8 @@ body:
       value: |
         Thanks for reporting a bug. Please fill in as much as you can — the more we have, the faster we can fix it.
 
+        🛡️ **Security issue?** Please don't post it here — see [SECURITY.md](https://github.com/rosoam/peekly/blob/main/SECURITY.md) for the disclosure procedure.
+
   - type: textarea
     id: what
     attributes:

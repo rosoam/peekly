@@ -150,6 +150,23 @@ Peekly does **not** transmit any data anywhere. Everything runs locally in your 
 - Cross-frame panel forwarding to the top frame
 - Vue / Solid / Preact support
 
+## Documentation
+
+| | |
+|---|---|
+| [README.md](README.md) | This file. Overview, install, usage. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to set up, code, and submit PRs. |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Technical deep-dive: two-world content scripts, message protocol, fiber walking, DevTools hook, Shadow DOM, tooltip lifecycle. |
+| [RELEASING.md](RELEASING.md) | Cutting a release with `bun run release:*`. |
+| [docs/CHROME_WEB_STORE.md](docs/CHROME_WEB_STORE.md) | Step-by-step guide to publishing on the Chrome Web Store, including listing copy and permission justifications. |
+| [SECURITY.md](SECURITY.md) | Security policy, threat model, audit history, vulnerability reporting. |
+| [PRIVACY.md](PRIVACY.md) | Privacy policy. TL;DR: no data leaves your browser. |
+| [CHANGELOG.md](CHANGELOG.md) | Per-version user-facing changes. |
+
+## Security
+
+If you find a security issue, please don't open a public issue — see [SECURITY.md](SECURITY.md) for the disclosure procedure.
+
 ## Contributing
 
 PRs welcome! See [CONTRIBUTING.md](CONTRIBUTING.md).
