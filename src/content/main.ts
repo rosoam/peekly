@@ -27,6 +27,7 @@ import {
   renderPanel,
   showToast,
 } from './panel';
+import { type TooltipState, createTooltip } from './tooltip';
 
 const TARGET_ATTR = 'data-rp-target';
 
@@ -100,6 +101,9 @@ shadow.append(instancesLayer);
 const outlineLayer = document.createElement('div');
 outlineLayer.className = 'outline-layer';
 shadow.append(outlineLayer);
+
+// Contextual tooltip (Option + Shift hover).
+const tooltip: TooltipState = createTooltip(shadow, () => state.settings.editor);
 
 function attachHost(): void {
   if (host.isConnected) return;
@@ -318,7 +322,13 @@ function scheduleHover(el: Element, altIsDown: boolean): void {
     if (lastHoverEl !== el) return;
     void requestHover(el).then((res) => {
       if (lastHoverEl !== el) return;
-      if (res.ok && res.preview) applyPreview(res.preview, altIsDown);
+      if (res.ok && res.preview) {
+        applyPreview(res.preview, altIsDown);
+        // Refresh tooltip with the rich bridge data, if it's currently showing this element.
+        if (tooltipTargetEl === el && (tooltip.isPinned() || tooltip.el.style.display !== 'none')) {
+          tooltip.update({ preview: res.preview, targetEl: el, cursor: null });
+        }
+      }
     });
   }, 30);
 }
@@ -484,20 +494,19 @@ function showInspectError(message: string): void {
 
 // ─── Event handlers ──────────────────────────────────────────────────
 
-function handleMouseMove(ev: MouseEvent): void {
-  // Update outline mode visibility based on Alt+Shift (rendered passively).
-  if (state.outlineMode && !(ev.altKey && ev.shiftKey)) {
-    setOutlineMode(false);
-  }
-  if (!state.outlineMode && isPickerEnabled() && ev.altKey && ev.shiftKey) {
-    setOutlineMode(true);
-  }
+// Track which DOM element the tooltip currently shows, so we can hold position
+// stable while the cursor stays within the same element.
+let tooltipTargetEl: Element | null = null;
 
+function handleMouseMove(ev: MouseEvent): void {
   if (!isPickerEnabled() || !ev.altKey) {
     clearHighlight();
+    if (!tooltip.isPinned()) tooltip.hide();
     return;
   }
+  // Cursor over our own UI: keep state, don't track.
   if (isInsideHost(ev.target)) return;
+
   const el = elementUnderCursor(ev.clientX, ev.clientY);
   if (!el) {
     clearHighlight();
@@ -505,6 +514,41 @@ function handleMouseMove(ev: MouseEvent): void {
   }
   state.hoverEl = el;
   scheduleHover(el, true);
+
+  // Tooltip activates when Shift is also held (in addition to the basic highlight).
+  if (ev.shiftKey) {
+    if (el !== tooltipTargetEl) {
+      tooltipTargetEl = el;
+      tooltip.setVisible(true);
+      tooltip.update({
+        preview: previewFromCache(el),
+        targetEl: el,
+        cursor: { x: ev.clientX, y: ev.clientY },
+      });
+      // The bridge response will refine the preview shortly.
+    }
+  } else if (!tooltip.isPinned()) {
+    tooltip.hide();
+    tooltipTargetEl = null;
+  }
+}
+
+// Synthesize a minimal preview from the DOM element while we wait for the bridge response.
+// Avoids tooltip flicker on first show.
+function previewFromCache(el: Element) {
+  return {
+    name: el.tagName.toLowerCase(),
+    kind: 'host' as const,
+    rect: el.getBoundingClientRect(),
+    domTag: el.tagName.toLowerCase(),
+    source: null,
+    propNames: [],
+    parentName: null,
+    childrenNames: [],
+    ownerNames: [],
+    elementId: el.id || '',
+    className: el.getAttribute('class') ?? '',
+  };
 }
 
 function handleMouseDown(ev: MouseEvent): void {
@@ -514,6 +558,9 @@ function handleMouseDown(ev: MouseEvent): void {
   if (!el) return;
   ev.preventDefault();
   ev.stopPropagation();
+  // Opening the full panel — close the contextual tooltip to avoid duplicate surfaces.
+  tooltip.hide();
+  tooltipTargetEl = null;
   void requestInspect(el).then((res) => {
     if (res.ok && res.data) {
       showInspectResult(res.data, el);
@@ -542,28 +589,56 @@ function handleKeyDown(ev: KeyboardEvent): void {
     clearPanel();
     clearHighlight();
     setOutlineMode(false);
+    tooltip.hide();
+    tooltipTargetEl = null;
+  }
+  // Re-pressing Shift while Alt is held: unpin so tooltip resumes following the cursor.
+  if (ev.key === 'Shift' && ev.altKey && tooltip.isPinned()) {
+    tooltip.setPinned(false);
   }
 }
 
 function handleKeyUp(ev: KeyboardEvent): void {
-  // When Alt is released, hide live highlight.
+  // Releasing Alt: hide highlight; if Shift is still held the tooltip can stay pinned, otherwise hide.
   if (ev.key === 'Alt' || !ev.altKey) {
     clearHighlight();
+    if (!tooltip.isPinned()) {
+      tooltip.hide();
+      tooltipTargetEl = null;
+    }
   }
-  if (state.outlineMode && !(ev.altKey && ev.shiftKey)) {
-    setOutlineMode(false);
+  // Releasing Shift while Alt is still held: pin the tooltip in place so the user can interact with it.
+  if (ev.key === 'Shift' && ev.altKey && tooltipTargetEl) {
+    tooltip.setPinned(true);
   }
 }
 
 function handleBlur(): void {
   clearHighlight();
   setOutlineMode(false);
+  if (!tooltip.isPinned()) {
+    tooltip.hide();
+    tooltipTargetEl = null;
+  }
 }
 
 function handleScroll(): void {
   clearHighlight();
   if (instancesLayer.children.length > 0) clearInstancesHighlight();
   if (state.outlineMode) renderOutlines();
+  // When floating, the tooltip is anchored to a viewport position that no longer matches the element.
+  if (!tooltip.isPinned()) {
+    tooltip.hide();
+    tooltipTargetEl = null;
+  }
+}
+
+// Click outside the tooltip while pinned: dismiss it.
+function handleClickAnywhere(ev: MouseEvent): void {
+  if (tooltip.isPinned() && !isInsideHost(ev.target)) {
+    tooltip.hide();
+    tooltipTargetEl = null;
+  }
 }
 
 function handleBridgeMessage(ev: MessageEvent): void {
@@ -645,6 +720,7 @@ function init(): void {
   window.addEventListener('mousemove', handleMouseMove, true);
   window.addEventListener('mousedown', handleMouseDown, true);
   window.addEventListener('click', handleClick, true);
+  window.addEventListener('click', handleClickAnywhere);
   window.addEventListener('auxclick', handleAuxClick, true);
   window.addEventListener('keydown', handleKeyDown, true);
   window.addEventListener('keyup', handleKeyUp, true);

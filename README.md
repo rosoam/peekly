@@ -15,6 +15,7 @@ No need to open DevTools. No need to switch tabs. Peekly lives quietly in the ba
 ## What it does
 
 - **Hover with `Option`** → an indigo border highlights the **React component** under the cursor (real bounding box, not just the DOM element under the pointer).
+- **Hover with `Option + Shift`** → adds a **floating contextual tooltip** near the cursor with tabs (`Comp` / `DOM` / `CSS` / `A11y`). Release `Shift` to **pin** it for interaction.
 - **`Option` + click** → a floating panel opens with everything you need:
   - **Source file** with one-click open in **VS Code / Cursor / WebStorm / Sublime**
   - **Parent and children navigation** (chips you can click to re-inspect — no need to move the mouse)
@@ -25,7 +26,6 @@ No need to open DevTools. No need to switch tabs. Peekly lives quietly in the ba
   - **Accessibility audit** — missing `alt`, `aria-label`, label associations, contrast ratio (WCAG)
   - **Hints** — inline functions in props, `dangerouslySetInnerHTML`, very long classNames
   - **Owner chain** — clickable links to every ancestor's source file
-- **`Option + Shift` + move** → **outline mode**: every component boundary on the page rendered as a faint dashed overlay
 - **Highlight all instances** (icon in the panel header) → paint every render of the same component on the page
 - **Drag the panel** by its header to reposition it
 

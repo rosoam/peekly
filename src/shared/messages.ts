@@ -100,6 +100,13 @@ export type ComponentPreview = {
   kind: ComponentKind;
   rect: Rect;
   domTag: string;
+  source: SourceLocation | null;
+  propNames: string[];
+  parentName: string | null;
+  childrenNames: string[];
+  ownerNames: string[];
+  elementId: string;
+  className: string;
 };
 
 export type Rect = {

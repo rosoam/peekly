@@ -665,6 +665,291 @@ export const overlayCss = `
   background: rgba(255, 255, 255, 0.015);
 }
 
+/* ─── Tooltip (contextual debugger, Option+Shift) ─────────────────── */
+
+.tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 340px;
+  max-height: 380px;
+  background: rgba(13, 13, 13, 0.97);
+  color: #f5f5f5;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(99, 102, 241, 0.1);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 12px;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  will-change: transform;
+}
+
+.tooltip.pinned {
+  border-color: rgba(99, 102, 241, 0.55);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(99, 102, 241, 0.3);
+}
+
+.tt-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 9px 12px 7px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tt-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #c7d2fe;
+  letter-spacing: -0.01em;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tt-tag {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  color: rgba(134, 239, 172, 0.65);
+  flex-shrink: 0;
+}
+
+.tt-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px 0;
+  background: rgba(255, 255, 255, 0.015);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tt-tab {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 5px 9px 7px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 100ms ease, border-color 100ms ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tt-tab:hover { color: rgba(255, 255, 255, 0.85); }
+
+.tt-tab.active {
+  color: #c7d2fe;
+  border-bottom-color: #6366f1;
+}
+
+.tt-badge {
+  background: #fb7185;
+  color: white;
+  font-size: 9px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-weight: 700;
+  min-width: 14px;
+  text-align: center;
+  letter-spacing: 0;
+}
+
+.tt-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.tt-footer {
+  padding: 6px 12px 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.015);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: center;
+}
+
+.tt-hint kbd {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.tt-row {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.tt-kind {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(199, 210, 254, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.tt-src {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: #86efac;
+  word-break: break-all;
+  line-height: 1.4;
+  background: rgba(134, 239, 172, 0.05);
+  border: 1px solid rgba(134, 239, 172, 0.15);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.tt-clickable { cursor: pointer; transition: background 100ms ease, border-color 100ms ease; }
+.tt-clickable:hover {
+  background: rgba(134, 239, 172, 0.12);
+  border-color: rgba(134, 239, 172, 0.35);
+}
+
+.tt-empty {
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+  font-size: 11px;
+  padding: 4px 0;
+}
+
+.tt-ok {
+  color: #86efac;
+  font-size: 11px;
+  padding: 4px 0;
+}
+
+.tt-warn {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 2px 0;
+}
+
+.tt-warn-mark { color: #fb7185; flex-shrink: 0; }
+
+.tt-kv {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 8px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  align-items: baseline;
+}
+
+.tt-kv-key { color: #fbbf24; font-weight: 500; }
+
+.tt-kv-val {
+  color: #d4d4d4;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tt-meta-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tt-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 6px;
+}
+
+.tt-chain-row {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  align-items: baseline;
+}
+
+.tt-chain-mark { color: rgba(255, 255, 255, 0.3); flex-shrink: 0; }
+
+.tt-current {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  padding: 4px 6px;
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+
+.tt-cur-mark { color: #6366f1; font-size: 9px; flex-shrink: 0; }
+
+.tt-cur-name {
+  color: #e0e7ff;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.tt-cur-tag {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  color: rgba(134, 239, 172, 0.65);
+  margin-left: auto;
+}
+
+.tt-section-h {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.tt-classes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tt-cls-row {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 8px;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  align-items: baseline;
+  line-height: 1.4;
+}
+
+.tt-cls-key { color: #fbbf24; font-weight: 600; }
+
+.tt-cls-val { color: #d4d4d4; word-break: break-word; }
+
 /* ─── Toast ───────────────────────────────────────────────────────── */
 
 .toast {

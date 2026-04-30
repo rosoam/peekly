@@ -5,6 +5,23 @@ All notable changes to Peekly will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Contextual tooltip** — hold `Option + Shift` and hover any element to get a near-cursor floating tooltip with tabs:
+  - **Comp** — component name, kind, source path (clickable to open in editor), parent name, children count, prop names
+  - **DOM** — owner chain, current node tag/id, children count, sibling index
+  - **CSS** — display, position, size, z-index, background (resolved hex), color, font, plus full Tailwind / UnoCSS class breakdown grouped by variant
+  - **A11y** — quick warnings (missing alt, accessible name, label, contrast) with red badge
+- The tooltip stays in place when the cursor moves into it (interactive). Releasing `Shift` while still holding `Option` pins the tooltip — click outside or `Esc` to dismiss.
+- Smart positioning: tooltip flips to the other side of the cursor when near the viewport edge.
+- **Quick analysis (Option only)** unchanged — still highlights the component with a label.
+
+### Removed
+
+- The `Option + Shift` outline mode trigger has been retired in favor of the tooltip. Outline mode will return as a popup toggle in a later release.
+
 ## [0.1.0] - 2026-04-30
 
 ### Added

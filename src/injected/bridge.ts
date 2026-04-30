@@ -411,24 +411,48 @@ function detectReact(): { detected: boolean; version?: string } {
 
 // ─── Inspect / hover / find ──────────────────────────────────────────
 
-function previewFromElement(el: Element): ComponentPreview | null {
+function previewFromElement(el: Element): ComponentPreview {
   const rawFiber = getFiberFromNode(el);
-  if (!rawFiber) return null;
-  const componentFiber = nearestComponentFiber(rawFiber);
+  const componentFiber = rawFiber ? nearestComponentFiber(rawFiber) : null;
+  const elementId = el.id || '';
+  const className = el.getAttribute('class') ?? '';
+
   if (!componentFiber) {
     return {
       name: el.tagName.toLowerCase(),
       kind: 'host',
       rect: rectFromElement(el),
       domTag: el.tagName.toLowerCase(),
+      source: null,
+      propNames: [],
+      parentName: null,
+      childrenNames: [],
+      ownerNames: [],
+      elementId,
+      className,
     };
   }
+
   const rect = fiberBoundingRect(componentFiber);
+  const props = componentFiber.memoizedProps;
+  const propNames =
+    props && typeof props === 'object' ? Object.keys(props as Record<string, unknown>) : [];
+  const parent = findParentComponentFiber(componentFiber);
+  const children = findChildComponentFibers(componentFiber, 8);
+  const owners = extractOwnerChain(componentFiber, 5);
+
   return {
     name: getComponentName(componentFiber.type),
     kind: fiberKind(componentFiber),
     rect: rect.width > 0 ? rect : rectFromElement(el),
     domTag: el.tagName.toLowerCase(),
+    source: extractSource(componentFiber),
+    propNames,
+    parentName: parent ? getComponentName(parent.type) : null,
+    childrenNames: children.map((c) => getComponentName(c.type)),
+    ownerNames: owners.map((o) => o.name),
+    elementId,
+    className,
   };
 }
 
@@ -618,18 +642,6 @@ function handleHoverRequest(req: HoverRequest): void {
       return;
     }
     const preview = previewFromElement(el);
-    if (!preview) {
-      respond({
-        ok: true,
-        preview: {
-          name: el.tagName.toLowerCase(),
-          kind: 'host',
-          rect: rectFromElement(el),
-          domTag: el.tagName.toLowerCase(),
-        },
-      });
-      return;
-    }
     respond({ ok: true, preview });
   } catch (err) {
     respond({ ok: false, error: (err as Error).message });
