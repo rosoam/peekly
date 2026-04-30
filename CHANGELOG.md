@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Tighter hover targeting.** The highlight now follows the precise DOM element under the cursor instead of the component's full bounding box (which previously made small text spans inside large components feel imprecise). The component name still shows in the label as `Component · <tag>`.
+- **Shadow DOM piercing.** `elementFromPoint` now drills into open shadow roots (web components) to target the actual element rather than the shadow host.
+
 ### Added
 
 - **Contextual tooltip** — hold `Option + Shift` and hover any element to get a near-cursor floating tooltip with tabs:

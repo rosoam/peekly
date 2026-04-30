@@ -145,7 +145,16 @@ function isInsideHost(target: EventTarget | null): boolean {
 function elementUnderCursor(x: number, y: number): Element | null {
   const prev = host.style.pointerEvents;
   host.style.pointerEvents = 'none';
-  const el = document.elementFromPoint(x, y);
+  let el = document.elementFromPoint(x, y);
+  // Pierce open shadow DOMs (web components) so we target the deepest real
+  // element rather than the shadow host.
+  let depth = 0;
+  while (el && el.shadowRoot && depth < 16) {
+    const inner = el.shadowRoot.elementFromPoint?.(x, y);
+    if (!inner || inner === el) break;
+    el = inner;
+    depth += 1;
+  }
   host.style.pointerEvents = prev;
   if (!el) return null;
   if (host.contains(el)) return null;
@@ -300,7 +309,12 @@ function requestFindInstances(fiberId: string): Promise<FindInstancesResponse> {
 }
 
 function applyPreview(preview: ComponentPreview, altIsDown: boolean): void {
-  const labelText = preview.kind === 'host' ? `<${preview.domTag}>` : preview.name;
+  // Show both the component identity and the actual DOM tag so the user
+  // immediately sees what they're hovering AND which component it belongs to.
+  const labelText =
+    preview.kind === 'host'
+      ? `<${preview.domTag}>`
+      : `${preview.name} · <${preview.domTag}>`;
   setHighlightFromRect(preview.rect, labelText, altIsDown);
 }
 

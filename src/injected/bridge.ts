@@ -433,7 +433,10 @@ function previewFromElement(el: Element): ComponentPreview {
     };
   }
 
-  const rect = fiberBoundingRect(componentFiber);
+  // Highlight the precise DOM element under the cursor, not the component's full
+  // bounding box. The user gets tight visual feedback (especially for text spans
+  // and small leaves), while the label / tooltip still identify the React
+  // component the element belongs to.
   const props = componentFiber.memoizedProps;
   const propNames =
     props && typeof props === 'object' ? Object.keys(props as Record<string, unknown>) : [];
@@ -444,7 +447,7 @@ function previewFromElement(el: Element): ComponentPreview {
   return {
     name: getComponentName(componentFiber.type),
     kind: fiberKind(componentFiber),
-    rect: rect.width > 0 ? rect : rectFromElement(el),
+    rect: rectFromElement(el),
     domTag: el.tagName.toLowerCase(),
     source: extractSource(componentFiber),
     propNames,
@@ -471,11 +474,14 @@ function tagFiberHost(fiber: Fiber, fiberId: string): void {
 }
 
 function inspectFiber(fiber: Fiber, domTag: string, fallbackEl?: Element): ComponentInfo {
-  const rect = fiberBoundingRect(fiber);
   const parent = findParentComponentFiber(fiber);
   const children = findChildComponentFibers(fiber);
   const fiberId = registerFiber(fiber);
   tagFiberHost(fiber, fiberId);
+  // Prefer the actual hovered/clicked element's rect for predictability;
+  // fall back to the fiber's bounding box (union of host descendants) only
+  // when no element was provided (e.g. inspect-by-id navigation).
+  const rect = fallbackEl ? rectFromElement(fallbackEl) : fiberBoundingRect(fiber);
   return {
     fiberId,
     name: getComponentName(fiber.type),
@@ -486,7 +492,7 @@ function inspectFiber(fiber: Fiber, domTag: string, fallbackEl?: Element): Compo
     parent: parent ? fiberToRef(parent) : null,
     children: children.map(fiberToRef),
     domTag,
-    rect: rect.width > 0 ? rect : fallbackEl ? rectFromElement(fallbackEl) : rect,
+    rect,
   };
 }
 
