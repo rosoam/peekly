@@ -20,11 +20,13 @@ import type {
   SubscribeRendersRequest,
   UnsubscribeRendersRequest,
 } from '../shared/messages';
+import { alpineAdapter } from './adapters/alpine';
 import { litAdapter } from './adapters/lit';
 import { livewireAdapter } from './adapters/livewire';
 import { plainDomAdapter } from './adapters/plain-dom';
 import { preactAdapter } from './adapters/preact';
 import { reactAdapter } from './adapters/react';
+import { twigAdapter } from './adapters/twig';
 import type { AdapterChain, FrameworkAdapter } from './adapters/types';
 import { vue3Adapter } from './adapters/vue3';
 
@@ -37,18 +39,24 @@ const CURRENT_ATTR = 'data-rp-current';
 // fallback last. New adapters slot in before plain-dom.
 
 const adapters: AdapterChain = [
-  // Component-tree frameworks first, in rough order of probe specificity.
+  // Component-tree JS frameworks first, in rough order of probe specificity.
   // React goes before Preact because preact/compat sets fiber-shaped keys that
   // the React adapter happily reads.
   reactAdapter,
   preactAdapter,
   vue3Adapter,
-  // Livewire before Lit so a `<my-livewire-component>` (custom-element-style)
-  // wrapped in `<div wire:id>` lands on the Livewire branch, which carries
-  // richer info (snapshot, props, source).
+  // PHP-side reactive frameworks
   livewireAdapter,
+  // Web Components (native + Lit)
   litAdapter,
-  // Future: vue2Adapter, stimulusAdapter, alpineAdapter, angularAdapter, …
+  // Lighter behavioral frameworks — tried before Twig because their probes are
+  // cheaper (single property access vs comment-tree walk).
+  alpineAdapter,
+  // Server-rendered template attribution (Symfony/Twig with debug comments).
+  // Comes after Alpine so that an x-data scope inside a Twig template is
+  // attributed to Alpine (richer data) rather than Twig.
+  twigAdapter,
+  // Future: vue2Adapter, stimulusAdapter, angularAdapter, …
   plainDomAdapter,
 ];
 
