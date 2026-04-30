@@ -75,6 +75,22 @@ export type FindInstancesResponse = {
   error?: string;
 };
 
+export type FindFiberRectRequest = {
+  source: typeof RP_NAMESPACE;
+  kind: 'find-fiber-rect-request';
+  requestId: string;
+  fiberId: string;
+};
+
+export type FindFiberRectResponse = {
+  source: typeof RP_NAMESPACE;
+  kind: 'find-fiber-rect-response';
+  requestId: string;
+  ok: boolean;
+  rect: Rect | null;
+  error?: string;
+};
+
 export type ReactDetected = {
   source: typeof RP_NAMESPACE;
   kind: 'react-detected';
@@ -93,6 +109,8 @@ export type BridgeMessage =
   | RenderTickEvent
   | FindInstancesRequest
   | FindInstancesResponse
+  | FindFiberRectRequest
+  | FindFiberRectResponse
   | ReactDetected;
 
 export type ComponentPreview = {

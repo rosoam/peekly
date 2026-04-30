@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Hover-preview on navigation chips.** Hovering a parent button or a child chip in the panel now paints an amber dashed highlight around that component's actual position on the page — preview before navigating.
+
+### Changed
+
+- **Prop values are now selectable and horizontally scrollable.** Removed the 2-line clamp / ellipsis truncation. Long values stay on a single line and can be scrolled with a thin scrollbar. Same for computed-style values, Tailwind class lists, and source paths. Text selection is precise (`user-select: text`, `cursor: text`).
+- Custom thin scrollbars throughout the panel for a more native dev-tool feel.
+- Navigation chip / parent row hover states use amber to visually link with the in-page preview overlay.
+
 ### Changed
 
 - **Tighter hover targeting.** The highlight now follows the precise DOM element under the cursor instead of the component's full bounding box (which previously made small text spans inside large components feel imprecise). The component name still shows in the label as `Component · <tag>`.

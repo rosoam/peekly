@@ -8,6 +8,8 @@ import type {
   BridgeMessage,
   ComponentInfo,
   ComponentPreview,
+  FindFiberRectRequest,
+  FindFiberRectResponse,
   FindInstancesRequest,
   FindInstancesResponse,
   HoverRequest,
@@ -102,6 +104,12 @@ const outlineLayer = document.createElement('div');
 outlineLayer.className = 'outline-layer';
 shadow.append(outlineLayer);
 
+// Transient preview highlight: shows the DOM bounds of a navigation chip's
+// target component when the user hovers it inside the panel.
+const previewHighlight = document.createElement('div');
+previewHighlight.className = 'preview-highlight';
+shadow.append(previewHighlight);
+
 // Contextual tooltip (Option + Shift hover).
 const tooltip: TooltipState = createTooltip(shadow, () => state.settings.editor);
 
@@ -175,11 +183,14 @@ function clearPanel(): void {
   state.panelHandle = null;
   shadow.querySelector('.panel')?.remove();
   clearInstancesHighlight();
+  clearPreviewHighlight();
+  lastPreviewedFiberId = null;
 }
 
 const pendingInspects = new Map<string, (res: InspectResponse) => void>();
 const pendingHovers = new Map<string, (res: HoverResponse) => void>();
 const pendingInstances = new Map<string, (res: FindInstancesResponse) => void>();
+const pendingFiberRects = new Map<string, (res: FindFiberRectResponse) => void>();
 
 function newId(): string {
   return Math.random().toString(36).slice(2);
@@ -305,6 +316,63 @@ function requestFindInstances(fiberId: string): Promise<FindInstancesResponse> {
       window.clearTimeout(timeout);
       resolve(res);
     });
+  });
+}
+
+function requestFiberRect(fiberId: string): Promise<FindFiberRectResponse> {
+  const id = newId();
+  const req: FindFiberRectRequest = {
+    source: RP_NAMESPACE,
+    kind: 'find-fiber-rect-request',
+    requestId: id,
+    fiberId,
+  };
+  window.postMessage(req, '*');
+  return new Promise<FindFiberRectResponse>((resolve) => {
+    const timeout = window.setTimeout(() => {
+      pendingFiberRects.delete(id);
+      resolve({
+        source: RP_NAMESPACE,
+        kind: 'find-fiber-rect-response',
+        requestId: id,
+        ok: false,
+        rect: null,
+        error: 'timeout',
+      });
+    }, 800);
+    pendingFiberRects.set(id, (res) => {
+      window.clearTimeout(timeout);
+      resolve(res);
+    });
+  });
+}
+
+// ─── Preview highlight (chip hover) ──────────────────────────────────
+
+let lastPreviewedFiberId: string | null = null;
+
+function showPreviewHighlight(rect: Rect): void {
+  previewHighlight.style.display = 'block';
+  previewHighlight.style.left = `${rect.x}px`;
+  previewHighlight.style.top = `${rect.y}px`;
+  previewHighlight.style.width = `${rect.width}px`;
+  previewHighlight.style.height = `${rect.height}px`;
+}
+
+function clearPreviewHighlight(): void {
+  previewHighlight.style.display = 'none';
+}
+
+function previewChip(fiberId: string | null): void {
+  lastPreviewedFiberId = fiberId;
+  if (!fiberId) {
+    clearPreviewHighlight();
+    return;
+  }
+  void requestFiberRect(fiberId).then((res) => {
+    if (lastPreviewedFiberId !== fiberId) return;
+    if (res.ok && res.rect) showPreviewHighlight(res.rect);
+    else clearPreviewHighlight();
   });
 }
 
@@ -474,6 +542,7 @@ function showInspectResult(info: ComponentInfo, el: Element | null): void {
     onClose: clearPanel,
     onCopy,
     onNavigate,
+    onChipHover: previewChip,
     onToggleInstances: () => void toggleInstancesHighlight(),
     onPositionChange: (pos) => {
       state.panelPos = pos;
@@ -638,6 +707,8 @@ function handleBlur(): void {
 
 function handleScroll(): void {
   clearHighlight();
+  clearPreviewHighlight();
+  lastPreviewedFiberId = null;
   if (instancesLayer.children.length > 0) clearInstancesHighlight();
   if (state.outlineMode) renderOutlines();
   // When floating, the tooltip is anchored to a viewport position that no longer matches the element.
@@ -683,6 +754,15 @@ function handleBridgeMessage(ev: MessageEvent): void {
       const handler = pendingInstances.get(res.requestId);
       if (handler) {
         pendingInstances.delete(res.requestId);
+        handler(res);
+      }
+      break;
+    }
+    case 'find-fiber-rect-response': {
+      const res = data as FindFiberRectResponse;
+      const handler = pendingFiberRects.get(res.requestId);
+      if (handler) {
+        pendingFiberRects.delete(res.requestId);
         handler(res);
       }
       break;

@@ -6,6 +6,8 @@ import type {
   ComponentKind,
   ComponentPreview,
   ComponentRef,
+  FindFiberRectRequest,
+  FindFiberRectResponse,
   FindInstancesRequest,
   FindInstancesResponse,
   HoverRequest,
@@ -704,6 +706,33 @@ function handleInspectByIdRequest(req: InspectByIdRequest): void {
   }
 }
 
+function handleFindFiberRect(req: FindFiberRectRequest): void {
+  const respond = (payload: Omit<FindFiberRectResponse, 'source' | 'kind' | 'requestId'>): void => {
+    const msg: FindFiberRectResponse = {
+      source: RP_NAMESPACE,
+      kind: 'find-fiber-rect-response',
+      requestId: req.requestId,
+      ...payload,
+    };
+    window.postMessage(msg, '*');
+  };
+  try {
+    const fiber = lookupFiber(req.fiberId);
+    if (!fiber) {
+      respond({ ok: false, rect: null, error: 'Fiber not found' });
+      return;
+    }
+    const rect = fiberBoundingRect(fiber);
+    if (rect.width <= 0 || rect.height <= 0) {
+      respond({ ok: false, rect: null, error: 'Component has no rendered DOM' });
+      return;
+    }
+    respond({ ok: true, rect });
+  } catch (err) {
+    respond({ ok: false, rect: null, error: (err as Error).message });
+  }
+}
+
 function handleFindInstances(req: FindInstancesRequest): void {
   const respond = (payload: Omit<FindInstancesResponse, 'source' | 'kind' | 'requestId'>): void => {
     const msg: FindInstancesResponse = {
@@ -761,6 +790,9 @@ function listen(): void {
         break;
       case 'find-instances-request':
         handleFindInstances(data as FindInstancesRequest);
+        break;
+      case 'find-fiber-rect-request':
+        handleFindFiberRect(data as FindFiberRectRequest);
         break;
       default:
         break;

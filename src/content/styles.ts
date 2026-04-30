@@ -38,6 +38,20 @@ export const overlayCss = `
   letter-spacing: 0.02em;
 }
 
+/* ─── Preview highlight (chip hover in panel) ─────────────────────── */
+
+.preview-highlight {
+  position: fixed;
+  pointer-events: none;
+  border: 2px dashed #fbbf24;
+  background: rgba(251, 191, 36, 0.06);
+  box-shadow: 0 0 0 1px rgba(251, 191, 36, 0.4), 0 0 18px rgba(251, 191, 36, 0.25);
+  border-radius: 3px;
+  display: none;
+  contain: layout style paint;
+  transition: opacity 80ms ease;
+}
+
 /* ─── Multi-instance highlight ────────────────────────────────────── */
 
 .instances-layer {
@@ -213,8 +227,18 @@ export const overlayCss = `
   padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
+
+.panel-body::-webkit-scrollbar { width: 6px; }
+.panel-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+}
+.panel-body::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); }
+.panel-body::-webkit-scrollbar-track { background: transparent; }
 
 /* ─── Source card ─────────────────────────────────────────────────── */
 
@@ -253,6 +277,8 @@ export const overlayCss = `
   color: #e0e7ff;
   word-break: break-all;
   line-height: 1.4;
+  user-select: text;
+  cursor: text;
 }
 
 .source-actions {
@@ -408,8 +434,9 @@ export const overlayCss = `
 }
 
 .nav-row:hover {
-  background: rgba(99, 102, 241, 0.12);
-  border-color: rgba(99, 102, 241, 0.3);
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.35);
+  color: #fef3c7;
 }
 
 .nav-arrow {
@@ -455,8 +482,9 @@ export const overlayCss = `
 }
 
 .child-chip:hover {
-  background: rgba(99, 102, 241, 0.25);
-  border-color: rgba(99, 102, 241, 0.5);
+  background: rgba(251, 191, 36, 0.18);
+  border-color: rgba(251, 191, 36, 0.5);
+  color: #fef3c7;
 }
 
 /* ─── Re-renders ──────────────────────────────────────────────────── */
@@ -486,9 +514,9 @@ export const overlayCss = `
 
 .prop-row {
   display: grid;
-  grid-template-columns: minmax(0, 28%) 1fr;
+  grid-template-columns: minmax(0, 28%) minmax(0, 1fr);
   gap: 10px;
-  padding: 4px 0;
+  padding: 6px 0;
   font-family: ui-monospace, monospace;
   font-size: 11px;
   align-items: baseline;
@@ -497,17 +525,33 @@ export const overlayCss = `
 
 .prop-row:first-child { border-top: none; }
 
-.prop-key { color: #fbbf24; font-weight: 500; word-break: break-word; }
+.prop-key {
+  color: #fbbf24;
+  font-weight: 500;
+  word-break: break-word;
+  user-select: text;
+  cursor: text;
+}
 
 .prop-val {
   color: #d4d4d4;
-  word-break: break-word;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  user-select: text;
+  cursor: text;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
+
+.prop-val::-webkit-scrollbar { height: 4px; }
+.prop-val::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+.prop-val::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+.prop-val::-webkit-scrollbar-track { background: transparent; }
 
 .more-btn {
   margin-top: 8px;
@@ -548,15 +592,27 @@ export const overlayCss = `
 .kv-key {
   color: #86efac;
   font-weight: 500;
+  user-select: text;
+  cursor: text;
 }
 
 .kv-val {
   color: #d4d4d4;
-  word-break: break-word;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  user-select: text;
+  cursor: text;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
+
+.kv-val::-webkit-scrollbar { height: 3px; }
+.kv-val::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+.kv-val::-webkit-scrollbar-track { background: transparent; }
 
 /* ─── Tailwind decode ─────────────────────────────────────────────── */
 
@@ -578,12 +634,28 @@ export const overlayCss = `
 .tw-key {
   color: #fbbf24;
   font-weight: 600;
+  user-select: text;
+  cursor: text;
 }
 
 .tw-val {
   color: #d4d4d4;
-  word-break: break-word;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  user-select: text;
+  cursor: text;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
+
+.tw-val::-webkit-scrollbar { height: 3px; }
+.tw-val::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+.tw-val::-webkit-scrollbar-track { background: transparent; }
 
 /* ─── Warnings & hints ────────────────────────────────────────────── */
 
@@ -652,6 +724,7 @@ export const overlayCss = `
   font-size: 10px;
   color: rgba(134, 239, 172, 0.7);
   word-break: break-all;
+  user-select: text;
 }
 
 .owner-src.clickable { cursor: pointer; transition: color 100ms ease; }

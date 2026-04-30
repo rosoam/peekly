@@ -20,6 +20,7 @@ export type RenderPanelOptions = {
   onClose: () => void;
   onCopy: (text: string) => void;
   onNavigate: (fiberId: string) => void;
+  onChipHover: (fiberId: string | null) => void;
   onToggleInstances: () => void;
   onPositionChange: (pos: { x: number; y: number }) => void;
   initialPosition: { x: number; y: number } | null;
@@ -135,6 +136,7 @@ function buildSummary(info: ComponentInfo): string {
 
 type CopyFn = (text: string) => void;
 type NavigateFn = (fiberId: string) => void;
+type ChipHoverFn = (fiberId: string | null) => void;
 
 function makeButton(
   text: string,
@@ -316,18 +318,27 @@ function buildSourceCard(
   return card;
 }
 
-function buildNavSection(info: ComponentInfo, onNavigate: NavigateFn): HTMLElement | null {
+function buildNavSection(
+  info: ComponentInfo,
+  onNavigate: NavigateFn,
+  onChipHover: ChipHoverFn,
+): HTMLElement | null {
   if (!info.parent && info.children.length === 0) return null;
   const section = document.createElement('section');
   section.className = 'section';
+  section.addEventListener('mouseleave', () => onChipHover(null));
   const heading = document.createElement('h4');
   heading.className = 'section-title';
   heading.textContent = 'Navigation';
   section.append(heading);
 
   if (info.parent) {
-    const parentRow = buildNavRow('↑', `Parent: ${info.parent.name}`, () =>
-      onNavigate(info.parent!.fiberId),
+    const parentRow = buildNavRow(
+      '↑',
+      `Parent: ${info.parent.name}`,
+      () => onNavigate(info.parent!.fiberId),
+      info.parent.fiberId,
+      onChipHover,
     );
     section.append(parentRow);
   }
@@ -346,14 +357,20 @@ function buildNavSection(info: ComponentInfo, onNavigate: NavigateFn): HTMLEleme
     section.append(wrap);
 
     for (const child of info.children) {
-      list.append(buildChildChip(child, onNavigate));
+      list.append(buildChildChip(child, onNavigate, onChipHover));
     }
     section.append(list);
   }
   return section;
 }
 
-function buildNavRow(arrow: string, text: string, onClick: () => void): HTMLElement {
+function buildNavRow(
+  arrow: string,
+  text: string,
+  onClick: () => void,
+  fiberId: string,
+  onChipHover: ChipHoverFn,
+): HTMLElement {
   const row = document.createElement('button');
   row.type = 'button';
   row.className = 'nav-row';
@@ -365,16 +382,24 @@ function buildNavRow(arrow: string, text: string, onClick: () => void): HTMLElem
   t.textContent = text;
   row.append(a, t);
   row.addEventListener('click', onClick);
+  row.addEventListener('mouseenter', () => onChipHover(fiberId));
+  row.addEventListener('mouseleave', () => onChipHover(null));
   return row;
 }
 
-function buildChildChip(child: ComponentRef, onNavigate: NavigateFn): HTMLElement {
+function buildChildChip(
+  child: ComponentRef,
+  onNavigate: NavigateFn,
+  onChipHover: ChipHoverFn,
+): HTMLElement {
   const chip = document.createElement('button');
   chip.type = 'button';
   chip.className = 'child-chip';
   chip.textContent = child.name;
   chip.title = child.source ? pathString(child.source) : child.kind;
   chip.addEventListener('click', () => onNavigate(child.fiberId));
+  chip.addEventListener('mouseenter', () => onChipHover(child.fiberId));
+  chip.addEventListener('mouseleave', () => onChipHover(null));
   return chip;
 }
 
@@ -873,18 +898,30 @@ function buildFooter(info: ComponentInfo, onCopy: CopyFn): HTMLElement {
 export function renderPanel(root: ShadowRoot, opts: RenderPanelOptions): PanelHandle {
   root.querySelector('.panel')?.remove();
 
-  const { info, targetEl, editor, onClose, onCopy, onNavigate, onToggleInstances, onPositionChange, initialPosition } =
-    opts;
+  const {
+    info,
+    targetEl,
+    editor,
+    onClose,
+    onCopy,
+    onNavigate,
+    onChipHover,
+    onToggleInstances,
+    onPositionChange,
+    initialPosition,
+  } = opts;
 
   const panel = document.createElement('div');
   panel.className = 'panel';
+  // Hovering anywhere outside the nav section should clear the preview highlight.
+  panel.addEventListener('mouseleave', () => onChipHover(null));
 
   const body = document.createElement('div');
   body.className = 'panel-body';
 
   body.append(buildSourceCard(info, editor, onCopy));
 
-  const navSection = buildNavSection(info, onNavigate);
+  const navSection = buildNavSection(info, onNavigate, onChipHover);
   if (navSection) body.append(navSection);
 
   const renderSection = buildRenderSection();
