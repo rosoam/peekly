@@ -218,7 +218,12 @@ function renderDomTab(body: HTMLElement, p: ComponentPreview, el: Element | null
     for (const n of reversed) {
       const li = document.createElement('div');
       li.className = 'tt-chain-row';
-      li.innerHTML = `<span class="tt-chain-mark">↑</span><span>${n}</span>`;
+      const mark = document.createElement('span');
+      mark.className = 'tt-chain-mark';
+      mark.textContent = '↑';
+      const nameEl = document.createElement('span');
+      nameEl.textContent = n;
+      li.append(mark, nameEl);
       chain.append(li);
     }
     body.append(chain);
@@ -227,8 +232,20 @@ function renderDomTab(body: HTMLElement, p: ComponentPreview, el: Element | null
   // Current
   const cur = document.createElement('div');
   cur.className = 'tt-current';
-  const tag = `<${p.domTag}${p.elementId ? `#${p.elementId}` : ''}>`;
-  cur.innerHTML = `<span class="tt-cur-mark">●</span><span class="tt-cur-name">${p.name === p.domTag ? tag : p.name}</span>${p.name !== p.domTag ? `<span class="tt-cur-tag">${tag}</span>` : ''}`;
+  const tagText = `<${p.domTag}${p.elementId ? `#${p.elementId}` : ''}>`;
+  const curMark = document.createElement('span');
+  curMark.className = 'tt-cur-mark';
+  curMark.textContent = '●';
+  const curName = document.createElement('span');
+  curName.className = 'tt-cur-name';
+  curName.textContent = p.name === p.domTag ? tagText : p.name;
+  cur.append(curMark, curName);
+  if (p.name !== p.domTag) {
+    const curTag = document.createElement('span');
+    curTag.className = 'tt-cur-tag';
+    curTag.textContent = tagText;
+    cur.append(curTag);
+  }
   body.append(cur);
 
   // DOM-level info
@@ -324,7 +341,12 @@ function renderA11yTab(body: HTMLElement, el: Element | null): void {
   for (const w of warnings) {
     const row = document.createElement('div');
     row.className = 'tt-warn';
-    row.innerHTML = `<span class="tt-warn-mark">⚠</span><span>${w}</span>`;
+    const mark = document.createElement('span');
+    mark.className = 'tt-warn-mark';
+    mark.textContent = '⚠';
+    const text = document.createElement('span');
+    text.textContent = w;
+    row.append(mark, text);
     body.append(row);
   }
 }

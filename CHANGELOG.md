@@ -9,33 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Hover-preview on navigation chips.** Hovering a parent button or a child chip in the panel now paints an amber dashed highlight around that component's actual position on the page — preview before navigating.
-
-### Changed
-
-- **Prop values are now selectable and horizontally scrollable.** Removed the 2-line clamp / ellipsis truncation. Long values stay on a single line and can be scrolled with a thin scrollbar. Same for computed-style values, Tailwind class lists, and source paths. Text selection is precise (`user-select: text`, `cursor: text`).
-- Custom thin scrollbars throughout the panel for a more native dev-tool feel.
-- Navigation chip / parent row hover states use amber to visually link with the in-page preview overlay.
-
-### Changed
-
-- **Tighter hover targeting.** The highlight now follows the precise DOM element under the cursor instead of the component's full bounding box (which previously made small text spans inside large components feel imprecise). The component name still shows in the label as `Component · <tag>`.
-- **Shadow DOM piercing.** `elementFromPoint` now drills into open shadow roots (web components) to target the actual element rather than the shadow host.
-
-### Added
-
 - **Contextual tooltip** — hold `Option + Shift` and hover any element to get a near-cursor floating tooltip with tabs:
   - **Comp** — component name, kind, source path (clickable to open in editor), parent name, children count, prop names
   - **DOM** — owner chain, current node tag/id, children count, sibling index
   - **CSS** — display, position, size, z-index, background (resolved hex), color, font, plus full Tailwind / UnoCSS class breakdown grouped by variant
   - **A11y** — quick warnings (missing alt, accessible name, label, contrast) with red badge
-- The tooltip stays in place when the cursor moves into it (interactive). Releasing `Shift` while still holding `Option` pins the tooltip — click outside or `Esc` to dismiss.
-- Smart positioning: tooltip flips to the other side of the cursor when near the viewport edge.
-- **Quick analysis (Option only)** unchanged — still highlights the component with a label.
+
+  The tooltip stays in place when the cursor moves into it (interactive). Releasing `Shift` while still holding `Option` pins the tooltip — click outside or `Esc` to dismiss. Smart positioning: it flips to the other side of the cursor near viewport edges.
+
+- **Hover-preview on navigation chips.** Hovering a parent button or a child chip in the panel paints an amber dashed highlight around that component's actual position on the page — preview before navigating.
+
+- **Quick analysis with `Option` only** is unchanged: still highlights the component with a label.
+
+### Changed
+
+- **Tighter hover targeting.** The highlight now follows the precise DOM element under the cursor instead of the component's full bounding box, which previously made small text spans inside large components feel imprecise. The component name still shows in the label as `Component · <tag>`.
+- **Shadow DOM piercing.** `elementFromPoint` now drills into open shadow roots (web components) to target the actual element rather than the shadow host.
+- **Selectable, scrollable values everywhere.** Removed the 2-line clamp / ellipsis on prop values. Long values stay on a single line with horizontal scroll (custom thin scrollbar) and `user-select: text` for precise text selection. Same treatment for computed styles, Tailwind class lists, and source paths.
+- Custom thin scrollbars throughout the panel for a more native dev-tool feel.
+- Navigation chip / parent row hover states use amber to visually link with the in-page preview overlay.
 
 ### Removed
 
-- The `Option + Shift` outline mode trigger has been retired in favor of the tooltip. Outline mode will return as a popup toggle in a later release.
+- The `Option + Shift` outline mode trigger has been retired in favor of the contextual tooltip. Outline mode will return as a popup toggle in a later release.
+
+### Security
+
+- **Hardened DOM rendering.** Replaced all `innerHTML` insertions of dynamic data (component names, DOM tags, accessibility warnings) in the contextual tooltip with `createElement` + `textContent`, so a malicious site cannot inject markup or scripts via crafted React `displayName` or DOM attributes.
+- **Restricted "Open in editor" to known editor protocols.** The service worker now rejects any URL whose protocol is not in a small whitelist (`vscode:`, `vscode-insiders:`, `cursor:`, `webstorm:`, `idea:`, `pycharm:`, `subl:`). Defense-in-depth so that a crafted message can't be turned into an arbitrary tab navigation.
 
 ## [0.1.0] - 2026-04-30
 
