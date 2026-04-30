@@ -155,12 +155,16 @@ export type ComponentInfo = {
 };
 
 export type ComponentKind =
-  | 'function'
-  | 'class'
-  | 'forwardRef'
-  | 'memo'
-  | 'lazy'
-  | 'host'
+  | 'function'        // React / Preact function component, generic functional
+  | 'class'           // React / Preact class component
+  | 'forwardRef'      // React.forwardRef
+  | 'memo'            // React.memo / SimpleMemo
+  | 'lazy'            // React.lazy
+  | 'composition'     // Vue 3 setup() / <script setup>
+  | 'options'         // Vue 2 / Vue 3 Options API
+  | 'lit'             // Lit element
+  | 'web-component'   // generic Custom Element
+  | 'host'            // bare DOM element (Plain DOM adapter)
   | 'unknown';
 
 export type SourceLocation = {

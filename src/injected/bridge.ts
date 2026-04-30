@@ -21,8 +21,10 @@ import type {
   UnsubscribeRendersRequest,
 } from '../shared/messages';
 import { plainDomAdapter } from './adapters/plain-dom';
+import { preactAdapter } from './adapters/preact';
 import { reactAdapter } from './adapters/react';
 import type { AdapterChain, FrameworkAdapter } from './adapters/types';
+import { vue3Adapter } from './adapters/vue3';
 
 const TARGET_ATTR = 'data-rp-target';
 const CURRENT_ATTR = 'data-rp-current';
@@ -33,8 +35,12 @@ const CURRENT_ATTR = 'data-rp-current';
 // fallback last. New adapters slot in before plain-dom.
 
 const adapters: AdapterChain = [
+  // React goes first because the React DevTools compat shim makes Preact-with-compat
+  // apps look like React. For pure Preact (no compat), the Preact adapter takes over.
   reactAdapter,
-  // Future: preactAdapter, vue3Adapter, vue2Adapter, litAdapter, livewireAdapter, …
+  preactAdapter,
+  vue3Adapter,
+  // Future: vue2Adapter, litAdapter, livewireAdapter, stimulusAdapter, alpineAdapter, …
   plainDomAdapter,
 ];
 

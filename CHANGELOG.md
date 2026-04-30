@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-framework support**, foundation. Peekly is no longer React-only.
+  - **React** (existing) — fiber walking, props, source via `_debugSource`, live re-render counter
+  - **Vue 3** — detection via `__vueParentComponent`; surfaces component name (`__name`/`name`), source file (`__file` from `@vitejs/plugin-vue` dev), props plus auto-unwrapped Composition API setup state and Options API data, parent chain, child components
+  - **Preact** (without `preact/compat`) — detection via `__c` / `_component` on host elements, vnode-based walking, source via `__source`
+  - **Plain DOM fallback** — works on *any* HTML page even without a framework. Surfaces tag name, HTML attributes as "props", ancestor chain, parent/children DOM elements. Designed so Peekly is useful on WordPress, vanilla PHP, server-rendered Symfony / Laravel templates, and anything else.
+
+  Detection is **invisible**: the user never sees "framework: X". The panel and tooltip just show the right data for whatever they hover. The adapter chain tries each framework in priority order (React → Preact → Vue 3 → … → Plain DOM) and uses the first one that recognizes the element.
+
+- **DOM tab v2** in the contextual tooltip — full rich HTML rendering:
+  - opening tag with attributes formatted line-by-line, every value selectable and horizontally scrollable
+  - parent up-button (`↑ parent: <selector>`)
+  - children list with click-to-navigate (drill into child elements without leaving the tooltip)
+  - hover-preview overlay (amber dashed) when hovering a child or parent row
+  - "Copy" button — copies the element's `outerHTML`
+  - text content preview for leaf elements
+  - works for any element on any page (uses Plain DOM adapter when no framework matches)
+
+- New documentation: [`docs/MULTI_FRAMEWORK_AUDIT.md`](docs/MULTI_FRAMEWORK_AUDIT.md) — feasibility analysis, framework prioritization (Vue 3 / Preact / Lit / Livewire / Stimulus / Vue 2 / Angular), adapter architecture proposal, dedicated PHP / Laravel / Symfony / Twig / Livewire section.
+
+### Changed
+
+- The MAIN-world bridge (`src/injected/bridge.ts`) is now a thin orchestrator over pluggable `FrameworkAdapter` modules under `src/injected/adapters/`. Each adapter exports a single object implementing `recognizes` / `inspect` / `preview` / `resolveById` / `componentRect` / `findInstancesOfSameType` / `subscribeRenders` (optional).
+
 ## [0.2.0] - 2026-04-30
 
 ### Added
