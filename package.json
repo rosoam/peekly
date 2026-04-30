@@ -30,7 +30,11 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "gen:icons": "bun run scripts/gen-icons.ts",
-    "zip": "bun run build && cd dist && zip -r ../peekly.zip ."
+    "zip": "bun run build && cd dist && zip -r ../peekly.zip .",
+    "release": "bun run scripts/release.ts",
+    "release:patch": "bun run scripts/release.ts patch",
+    "release:minor": "bun run scripts/release.ts minor",
+    "release:major": "bun run scripts/release.ts major"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.0.0-beta.28",

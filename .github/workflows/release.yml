@@ -37,3 +37,29 @@ jobs:
         with:
           files: peekly.zip
           generate_release_notes: true
+
+      # ─────────────────────────────────────────────────────────────────
+      # Optional: publish to the Chrome Web Store on tag push.
+      # See RELEASING.md → "Publishing to the Chrome Web Store" for the
+      # one-time setup. The step is gated on CWS_EXTENSION_ID being set,
+      # so it stays inert until you provide the four secrets.
+      # ─────────────────────────────────────────────────────────────────
+      - name: Check Chrome Web Store secrets
+        id: cws_check
+        run: |
+          if [ -n "${{ secrets.CWS_EXTENSION_ID }}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to Chrome Web Store
+        if: steps.cws_check.outputs.enabled == 'true'
+        uses: mnao305/chrome-extension-upload@v5.0.0
+        with:
+          file-path: peekly.zip
+          extension-id: ${{ secrets.CWS_EXTENSION_ID }}
+          client-id: ${{ secrets.CWS_CLIENT_ID }}
+          client-secret: ${{ secrets.CWS_CLIENT_SECRET }}
+          refresh-token: ${{ secrets.CWS_REFRESH_TOKEN }}
+          publish: true
