@@ -20,6 +20,8 @@ import type {
   SubscribeRendersRequest,
   UnsubscribeRendersRequest,
 } from '../shared/messages';
+import { litAdapter } from './adapters/lit';
+import { livewireAdapter } from './adapters/livewire';
 import { plainDomAdapter } from './adapters/plain-dom';
 import { preactAdapter } from './adapters/preact';
 import { reactAdapter } from './adapters/react';
@@ -35,12 +37,18 @@ const CURRENT_ATTR = 'data-rp-current';
 // fallback last. New adapters slot in before plain-dom.
 
 const adapters: AdapterChain = [
-  // React goes first because the React DevTools compat shim makes Preact-with-compat
-  // apps look like React. For pure Preact (no compat), the Preact adapter takes over.
+  // Component-tree frameworks first, in rough order of probe specificity.
+  // React goes before Preact because preact/compat sets fiber-shaped keys that
+  // the React adapter happily reads.
   reactAdapter,
   preactAdapter,
   vue3Adapter,
-  // Future: vue2Adapter, litAdapter, livewireAdapter, stimulusAdapter, alpineAdapter, …
+  // Livewire before Lit so a `<my-livewire-component>` (custom-element-style)
+  // wrapped in `<div wire:id>` lands on the Livewire branch, which carries
+  // richer info (snapshot, props, source).
+  livewireAdapter,
+  litAdapter,
+  // Future: vue2Adapter, stimulusAdapter, alpineAdapter, angularAdapter, …
   plainDomAdapter,
 ];
 

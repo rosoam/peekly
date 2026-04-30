@@ -9,10 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Multi-framework support**, foundation. Peekly is no longer React-only.
-  - **React** (existing) — fiber walking, props, source via `_debugSource`, live re-render counter
-  - **Vue 3** — detection via `__vueParentComponent`; surfaces component name (`__name`/`name`), source file (`__file` from `@vitejs/plugin-vue` dev), props plus auto-unwrapped Composition API setup state and Options API data, parent chain, child components
+- **Multi-framework support** — Peekly is no longer React-only. Six framework adapters dispatch invisibly:
+  - **React** — fiber walking, props, source via `_debugSource`, live re-render counter (existing)
   - **Preact** (without `preact/compat`) — detection via `__c` / `_component` on host elements, vnode-based walking, source via `__source`
+  - **Vue 3** — detection via `__vueParentComponent`; surfaces component name (`__name`/`name`), source file (`__file` from `@vitejs/plugin-vue` dev), props plus auto-unwrapped Composition API setup state and Options API data, parent chain, child components
+  - **Lit / Web Components** — detects any custom element (`tagName.includes('-')` and `customElements.get(tag)`); enriches with Lit-declared `static properties` when the element extends `LitElement`. Walks both light DOM and shadow DOM children.
+  - **Laravel Livewire** (v3 + v2) — detects `wire:id` wrappers, parses `wire:snapshot` JSON to surface the Livewire component class name, public properties (with v3's `[value, metadata]` tuples normalised), `$listeners`, and `$path`. Source path inferred from the PHP class name (`App\Livewire\UserProfile` → `app/Livewire/UserProfile.php`).
   - **Plain DOM fallback** — works on *any* HTML page even without a framework. Surfaces tag name, HTML attributes as "props", ancestor chain, parent/children DOM elements. Designed so Peekly is useful on WordPress, vanilla PHP, server-rendered Symfony / Laravel templates, and anything else.
 
   Detection is **invisible**: the user never sees "framework: X". The panel and tooltip just show the right data for whatever they hover. The adapter chain tries each framework in priority order (React → Preact → Vue 3 → … → Plain DOM) and uses the first one that recognizes the element.
