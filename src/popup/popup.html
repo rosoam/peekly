@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>React Picker</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 16px;
+        width: 280px;
+        font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+        font-size: 13px;
+        background: #0d0d0d;
+        color: #f5f5f5;
+      }
+      h1 {
+        font-size: 14px;
+        margin: 0 0 4px;
+        font-weight: 600;
+        color: #a5b4fc;
+      }
+      p.lead {
+        margin: 0 0 14px;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        margin-bottom: 8px;
+        gap: 12px;
+      }
+      .row.clickable {
+        cursor: pointer;
+        user-select: none;
+      }
+      .row.clickable:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .row-label {
+        font-weight: 500;
+        font-size: 12px;
+      }
+      .row-sub {
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.45);
+        margin-top: 2px;
+      }
+      .pill {
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.5);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .pill.on {
+        background: #6366f1;
+        color: white;
+      }
+      select {
+        background: #1a1a1a;
+        color: #f5f5f5;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 5px;
+        padding: 4px 6px;
+        font-size: 11px;
+        font-family: inherit;
+      }
+      .hint {
+        margin-top: 12px;
+        padding: 8px 10px;
+        background: rgba(99, 102, 241, 0.1);
+        border-left: 2px solid #6366f1;
+        border-radius: 4px;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.75);
+        line-height: 1.45;
+      }
+      kbd {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 3px;
+        padding: 1px 5px;
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>React Picker</h1>
+    <p class="lead">
+      Hold <kbd>⌥ Option</kbd> (Mac) / <kbd>Alt</kbd> (Win/Linux), hover to highlight, click to inspect the React component.
+    </p>
+
+    <div id="toggle" class="row clickable" role="button" tabindex="0">
+      <div>
+        <div class="row-label">Active</div>
+        <div class="row-sub">Pick on every page</div>
+      </div>
+      <span id="toggle-state" class="pill">off</span>
+    </div>
+
+    <div id="auto-localhost" class="row clickable" role="button" tabindex="0">
+      <div>
+        <div class="row-label">Auto-on localhost</div>
+        <div class="row-sub">localhost · 127.0.0.1 · *.localhost</div>
+      </div>
+      <span id="auto-localhost-state" class="pill">off</span>
+    </div>
+
+    <div class="row">
+      <div>
+        <div class="row-label">Editor</div>
+        <div class="row-sub">For "Open in" link</div>
+      </div>
+      <select id="editor">
+        <option value="vscode">VS Code</option>
+        <option value="cursor">Cursor</option>
+        <option value="webstorm">WebStorm</option>
+        <option value="sublime">Sublime</option>
+        <option value="none">None</option>
+      </select>
+    </div>
+
+    <div class="hint">
+      Best on dev builds (component names &amp; source locations preserved by the React JSX transform).
+    </div>
+
+    <script type="module" src="./popup.ts"></script>
+  </body>
+</html>

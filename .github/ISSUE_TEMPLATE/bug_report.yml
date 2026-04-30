@@ -1,0 +1,77 @@
+name: Bug report
+description: Report something broken in Peekly
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please fill in as much as you can — the more we have, the faster we can fix it.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+      placeholder: When I hold Option and hover, no border appears.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      placeholder: An indigo border around the React component under the cursor.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to localhost:3000 (Vite + React app)
+        2. Click the Peekly icon, toggle Active on
+        3. Hold Option and hover an element
+        4. Nothing happens
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser & version
+      placeholder: Chrome 132 on macOS 14.6
+    validations:
+      required: true
+
+  - type: input
+    id: peekly-version
+    attributes:
+      label: Peekly version
+      placeholder: 0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: build-type
+    attributes:
+      label: Site type
+      options:
+        - Local dev server (Vite, Next.js, CRA, etc.)
+        - Production / minified build
+        - Mixed / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: console
+    attributes:
+      label: Console errors
+      description: Any errors in the page console or the extension's service worker (`chrome://extensions/` → Peekly → "Inspect views: service worker").
+      render: text
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots, video, sample app URL — anything that helps.
