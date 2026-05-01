@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Manifest V3](https://img.shields.io/badge/manifest-v3-success.svg)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3)
 
-**Hold `⌥ Option` (Mac) / `Alt` (Win/Linux), hover any element, click to inspect.**
+**Hold `y`, hover any element, click to inspect. Add `x` for the contextual tooltip.**
 
 No need to open DevTools. No need to switch tabs. Peekly lives quietly in the background and only shows up when you ask for it.
 
@@ -14,9 +14,9 @@ No need to open DevTools. No need to switch tabs. Peekly lives quietly in the ba
 
 ## What it does
 
-- **Hover with `Option`** → an indigo border highlights the **React component** under the cursor (real bounding box, not just the DOM element under the pointer).
-- **Hover with `Option + Shift`** → adds a **floating contextual tooltip** near the cursor with tabs (`Comp` / `DOM` / `CSS` / `A11y`). Release `Shift` to **pin** it for interaction.
-- **`Option` + click** → a floating panel opens with everything you need:
+- **Hover with `y`** → an indigo border highlights the **React component** under the cursor (real bounding box, not just the DOM element under the pointer).
+- **Hover with `y + x`** → adds a **floating contextual tooltip** near the cursor with tabs (`Comp` / `DOM` / `CSS` / `A11y`). Release `x` to **pin** it for interaction.
+- **`y` + click** → a floating panel opens with everything you need:
   - **Source file** with one-click open in **VS Code / Cursor / WebStorm / Sublime**
   - **Parent and children navigation** (chips you can click to re-inspect — no need to move the mouse)
   - **Live re-render counter** (powered by the React DevTools commit hook, installed automatically)
@@ -29,7 +29,7 @@ No need to open DevTools. No need to switch tabs. Peekly lives quietly in the ba
 - **Highlight all instances** (icon in the panel header) → paint every render of the same component on the page
 - **Drag the panel** by its header to reposition it
 
-`Option` is intentional — on macOS, `Ctrl + click` opens the OS context menu. `Option + click` is completely free.
+Plain letter keys (`y` / `x`) are intentional — they're easy to reach with one hand and don't collide with the OS / browser shortcuts that real modifiers (`Option`, `Shift`, `Ctrl`) tend to clash with. They're only active when you're not typing in a form field.
 
 ## Why not React DevTools?
 
@@ -38,7 +38,7 @@ React DevTools is great. Peekly is **complementary**, not a replacement:
 | | React DevTools | Peekly |
 |---|---|---|
 | Panel location | DevTools sidebar | Floating, on-page, draggable |
-| Element selection | Open DevTools → click "Select" → click | Hold `Option`, click |
+| Element selection | Open DevTools → click "Select" → click | Hold `y`, click |
 | Source jump | Right-click → "Show source" | One-click "Open in editor" button |
 | Computed styles | Separate Elements panel | Inline in the same panel |
 | Tailwind decode | None | Grouped by variant |
@@ -81,7 +81,7 @@ _Coming soon._
    - **Auto-on localhost** — automatically active on `localhost`, `127.0.0.1`, `*.localhost` (**on by default**)
    - **Editor** — VS Code / Cursor / WebStorm / Sublime / None (drives the "Open in" button)
 3. On any React app:
-   - Hold `⌥ Option` and move the cursor → indigo highlight + component name
+   - Hold `y` and move the cursor → indigo highlight + component name
    - Click → inspector panel
    - `Esc` closes it
 

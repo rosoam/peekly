@@ -146,7 +146,7 @@ while (el && el.shadowRoot && depth < 16) {
 
 Closed shadow roots are not penetrable from outside — that's a fundamental browser invariant we honor.
 
-## Tooltip lifecycle (Option + Shift)
+## Tooltip lifecycle (`y` + `x`)
 
 The tooltip is a small floating debugger that appears next to the cursor. Its state machine:
 
@@ -154,7 +154,7 @@ The tooltip is a small floating debugger that appears next to the cursor. Its st
               ┌──────────┐
               │  hidden  │
               └────┬─────┘
-                   │ Alt + Shift + mousemove on page
+                   │ y + x + mousemove on page
                    ▼
               ┌──────────┐
               │ tracking │ ◄──┐
@@ -166,7 +166,7 @@ The tooltip is a small floating debugger that appears next to the cursor. Its st
               │frozen    │
               │(in-tooltip)│
               └────┬─────┘
-                   │ Shift released (Alt still down)
+                   │ x released (y still held)
                    ▼
               ┌──────────┐
               │  pinned  │ ◄── interactive, click to use tabs
@@ -178,11 +178,13 @@ The tooltip is a small floating debugger that appears next to the cursor. Its st
               └──────────┘
 ```
 
+`y` and `x` are letter keys, not OS modifiers — `src/content/main.ts` tracks press/release manually via `keydown` / `keyup`. Handlers ignore the keys when the focus target is editable (`input`, `textarea`, `select`, `contenteditable`) and when any real modifier is held (`Cmd` / `Ctrl` / `Alt`), so they never steal text input or fight native shortcuts. `window.blur` clears both flags so a tab switch can't leave the picker stuck on.
+
 The tooltip never repositions while the cursor is inside it (the `mousemove` early-returns via `isInsideHost`). This makes the tabs clickable without the tooltip running away from the cursor.
 
 Position is set via `transform: translate3d(...)` for hardware-accelerated movement, with a flip if near the right or bottom viewport edges.
 
-## Full panel (Option + click)
+## Full panel (`y` + click)
 
 The panel is more elaborate:
 

@@ -558,7 +558,7 @@ export function createTooltip(
 
   const footer = document.createElement('div');
   footer.className = 'tt-footer';
-  footer.innerHTML = '<span class="tt-hint">Click element with <kbd>⌥</kbd> for full panel</span>';
+  footer.innerHTML = '<span class="tt-hint">Click element with <kbd>y</kbd> for full panel</span>';
 
   el.append(header, tabsEl, body, footer);
   shadow.append(el);

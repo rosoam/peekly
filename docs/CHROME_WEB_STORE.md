@@ -69,7 +69,7 @@ Peekly
 ### Short description
 
 ```
-Hold Option/Alt and click to peek at any React component, DOM element, or CSS — fast, seamless, on any site.
+Hold y and click to peek at any React component, DOM element, or CSS — fast, seamless, on any site.
 ```
 
 (Limit: 132 characters. The version above is 110.)
@@ -79,7 +79,7 @@ Hold Option/Alt and click to peek at any React component, DOM element, or CSS �
 ```
 Peekly is a near-invisible developer inspector that turns any web page into an interactive component map.
 
-Hold Option (⌥) on Mac or Alt on Windows/Linux, hover any element, and Peekly highlights the React component under your cursor. Click to open a floating panel with everything you need:
+Hold the y key, hover any element, and Peekly highlights the React component under your cursor. Click to open a floating panel with everything you need:
 
   • Source file — one-click "Open in VS Code / Cursor / WebStorm / Sublime"
   • Live re-render counter
@@ -91,7 +91,9 @@ Hold Option (⌥) on Mac or Alt on Windows/Linux, hover any element, and Peekly 
   • Hints for inline functions in props, dangerouslySetInnerHTML, very long classNames
   • Owner chain with clickable source links
 
-Hold Option + Shift while hovering for a contextual tooltip that follows the cursor — a mini debugger with tabs for Component / DOM / CSS / A11y. Release Shift to pin it; click outside to dismiss.
+Hold y + x while hovering for a contextual tooltip that follows the cursor — a mini debugger with tabs for Component / DOM / CSS / A11y. Release x to pin it; click outside to dismiss.
+
+Plain letter keys are intentional — they're easy to reach with one hand and don't collide with the OS / browser shortcuts that real modifiers (Option, Shift, Ctrl) tend to clash with. Peekly never captures keys while you're typing in a form field.
 
 Auto-on for localhost. Drag the panel anywhere. Works in iframes. Hardened against malicious sites (no innerHTML on dynamic data, whitelisted editor protocols, no network egress whatsoever).
 

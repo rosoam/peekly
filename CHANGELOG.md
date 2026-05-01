@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Modifier keys swapped to letter keys.** The picker is now activated by holding `y` (was `Option` / `Alt`) and the contextual tooltip is activated by also holding `x` (was `Shift`). The new bindings are easier to reach with one hand and don't collide with native browser / OS shortcuts. They are intentionally ignored while typing in form fields (`input` / `textarea` / `select` / `contenteditable`) and while any real modifier (`Cmd` / `Ctrl` / `Alt`) is held, so they never steal text input or browser shortcuts. Window blur clears both keys to avoid stuck-down state.
+- **Tooltip is sticky after key release.** Once the contextual tooltip is shown (via `y + x`), it stays on screen after both keys are released — regardless of which key the user lifts first. Dismissal is now an explicit user action: click outside the tooltip or press `Esc`. Re-pressing `x` while holding `y` resumes live cursor tracking for a fresh inspection.
+
 ## [0.2.0] - 2026-04-30
 
 ### Added

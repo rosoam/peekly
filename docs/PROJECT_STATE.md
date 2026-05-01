@@ -60,7 +60,7 @@ Versioned in `package.json`, `vite.config.ts` manifest, and `CHANGELOG.md`. Once
 
 ### New since v0.1.0
 
-- **Contextual tooltip** (Option+Shift hover) with 4 tabs: Comp, DOM (rich HTML rendering with click-to-navigate children), CSS (computed + Tailwind variant breakdown), A11y (WCAG checks).
+- **Contextual tooltip** (`y` + `x` hover) with 4 tabs: Comp, DOM (rich HTML rendering with click-to-navigate children), CSS (computed + Tailwind variant breakdown), A11y (WCAG checks).
 - **Hover-preview** on panel navigation chips — paints amber overlay around the target component before clicking.
 - **Tighter targeting** — DOM rect for highlight (was full component bounds), shadow DOM piercing, label format `Component · <tag>`.
 - **Selectable + scrollable values** everywhere in the panel (props / computed / Tailwind / source paths).
@@ -106,7 +106,7 @@ Versioned in `package.json`, `vite.config.ts` manifest, and `CHANGELOG.md`. Once
 4. **Pin / save panel position** across sessions.
 5. **Inspect history breadcrumb** in the panel (last 5 inspections).
 6. **Re-render counter for non-React adapters** (Vue's reactivity, Preact's hooks). Currently React-only.
-7. **Outline mode reactivation** — was retired in v0.2.0 from `Option+Shift`, needs to reappear as a popup toggle.
+7. **Outline mode reactivation** — was retired in v0.2.0 from the previous `Option+Shift` combo, needs to reappear as a popup toggle.
 
 ## Known issues / blockers
 
@@ -129,7 +129,7 @@ bun run demo:dev          # serves http://localhost:5173
 # In Chrome, manually:
 #   1. chrome://extensions/ → Load unpacked → select peekly/dist
 #   2. Navigate to localhost:5173
-#   3. Hold ⌥ Option (+ optionally Shift), interact, capture with
+#   3. Hold y (+ optionally x), interact, capture with
 #      Cmd+Shift+4 selecting a 1280×800 region.
 ```
 

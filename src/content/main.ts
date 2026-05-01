@@ -110,7 +110,7 @@ const previewHighlight = document.createElement('div');
 previewHighlight.className = 'preview-highlight';
 shadow.append(previewHighlight);
 
-// Contextual tooltip (Option + Shift hover).
+// Contextual tooltip (y + x hover).
 // Forward-declared because the tooltip's navigate/preview callbacks need to
 // reach into module-level helpers defined later (e.g. requestHover, showPreviewHighlight).
 function navigateTooltipToElement(target: Element): void {
@@ -626,8 +626,22 @@ function showInspectError(message: string): void {
 // stable while the cursor stays within the same element.
 let tooltipTargetEl: Element | null = null;
 
+// Modifier-key state. We use plain letter keys (y / x) instead of OS modifiers
+// (Option/Shift) to avoid clashing with native browser/OS shortcuts. They aren't
+// real modifiers, so press/release is tracked manually via key events.
+let yDown = false;
+let xDown = false;
+
+function isEditingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false;
+  const tag = target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+  if (target instanceof HTMLElement && target.isContentEditable) return true;
+  return false;
+}
+
 function handleMouseMove(ev: MouseEvent): void {
-  if (!isPickerEnabled() || !ev.altKey) {
+  if (!isPickerEnabled() || !yDown) {
     clearHighlight();
     if (!tooltip.isPinned()) tooltip.hide();
     return;
@@ -643,8 +657,8 @@ function handleMouseMove(ev: MouseEvent): void {
   state.hoverEl = el;
   scheduleHover(el, true);
 
-  // Tooltip activates when Shift is also held (in addition to the basic highlight).
-  if (ev.shiftKey) {
+  // Tooltip activates when x is also held (in addition to the basic highlight).
+  if (xDown) {
     if (el !== tooltipTargetEl) {
       tooltipTargetEl = el;
       tooltip.setVisible(true);
@@ -680,7 +694,7 @@ function previewFromCache(el: Element) {
 }
 
 function handleMouseDown(ev: MouseEvent): void {
-  if (!isPickerEnabled() || !ev.altKey || ev.button !== 0) return;
+  if (!isPickerEnabled() || !yDown || ev.button !== 0) return;
   if (isInsideHost(ev.target)) return;
   const el = elementUnderCursor(ev.clientX, ev.clientY);
   if (!el) return;
@@ -699,14 +713,14 @@ function handleMouseDown(ev: MouseEvent): void {
 }
 
 function handleClick(ev: MouseEvent): void {
-  if (ev.altKey && isPickerEnabled() && !isInsideHost(ev.target)) {
+  if (yDown && isPickerEnabled() && !isInsideHost(ev.target)) {
     ev.preventDefault();
     ev.stopPropagation();
   }
 }
 
 function handleAuxClick(ev: MouseEvent): void {
-  if (ev.altKey && isPickerEnabled() && !isInsideHost(ev.target)) {
+  if (yDown && isPickerEnabled() && !isInsideHost(ev.target)) {
     ev.preventDefault();
     ev.stopPropagation();
   }
@@ -720,31 +734,62 @@ function handleKeyDown(ev: KeyboardEvent): void {
     tooltip.hide();
     tooltipTargetEl = null;
   }
-  // Re-pressing Shift while Alt is held: unpin so tooltip resumes following the cursor.
-  if (ev.key === 'Shift' && ev.altKey && tooltip.isPinned()) {
-    tooltip.setPinned(false);
+
+  if (!isPickerEnabled()) return;
+  // Don't intercept while the user is typing in a form field or composing text.
+  if (isEditingTarget(ev.target)) return;
+  // Don't fight native browser/OS shortcuts (e.g. Cmd+Y, Ctrl+X).
+  if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+
+  const k = ev.key.toLowerCase();
+  if (k === 'y' && !yDown) {
+    yDown = true;
+  }
+  if (k === 'x') {
+    // Pressing x while y is held: unpin any previously-pinned tooltip so the
+    // tooltip resumes following the cursor for a fresh inspection.
+    if (yDown && tooltip.isPinned()) {
+      tooltip.setPinned(false);
+    }
+    xDown = true;
   }
 }
 
 function handleKeyUp(ev: KeyboardEvent): void {
-  // Releasing Alt: hide highlight; if Shift is still held the tooltip can stay pinned, otherwise hide.
-  if (ev.key === 'Alt' || !ev.altKey) {
+  const k = ev.key.toLowerCase();
+  // Releasing y: hide highlight. If a tooltip is currently shown, pin it in place
+  // so the user can interact with it — they dismiss it via click-outside or Esc.
+  if (k === 'y') {
+    yDown = false;
     clearHighlight();
-    if (!tooltip.isPinned()) {
+    if (tooltipTargetEl) {
+      tooltip.setPinned(true);
+    } else if (!tooltip.isPinned()) {
       tooltip.hide();
       tooltipTargetEl = null;
     }
   }
-  // Releasing Shift while Alt is still held: pin the tooltip in place so the user can interact with it.
-  if (ev.key === 'Shift' && ev.altKey && tooltipTargetEl) {
-    tooltip.setPinned(true);
+  // Releasing x: pin the tooltip if one is shown. This keeps the contextual menu
+  // alive after the user lets go of the keys; they dismiss it manually.
+  if (k === 'x') {
+    xDown = false;
+    if (tooltipTargetEl) {
+      tooltip.setPinned(true);
+    }
   }
 }
 
 function handleBlur(): void {
+  // Window lost focus: assume the keys are no longer held (we won't see keyup).
+  yDown = false;
+  xDown = false;
   clearHighlight();
   setOutlineMode(false);
-  if (!tooltip.isPinned()) {
+  // If a tooltip was being shown, pin it so it survives the blur — user dismisses
+  // via click-outside or Esc, never implicitly.
+  if (tooltipTargetEl) {
+    tooltip.setPinned(true);
+  } else if (!tooltip.isPinned()) {
     tooltip.hide();
     tooltipTargetEl = null;
   }

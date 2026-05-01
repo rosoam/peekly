@@ -738,7 +738,7 @@ export const overlayCss = `
   background: rgba(255, 255, 255, 0.015);
 }
 
-/* ─── Tooltip (contextual debugger, Option+Shift) ─────────────────── */
+/* ─── Tooltip (contextual debugger, y + x) ─────────────────────────── */
 
 .tooltip {
   position: fixed;
