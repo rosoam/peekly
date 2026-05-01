@@ -1,6 +1,6 @@
 {
   "name": "peekly",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Hold Y and click to peek at any React component, DOM element, or CSS. Hold Y + X for the contextual tooltip — fast, seamless, on any site.",
   "private": true,
   "type": "module",

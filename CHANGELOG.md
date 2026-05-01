@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-01
+
 ### Changed
 
 - **Modifier keys swapped to letter keys.** The picker is now activated by holding `y` (was `Option` / `Alt`) and the contextual tooltip is activated by also holding `x` (was `Shift`). The new bindings are easier to reach with one hand and don't collide with native browser / OS shortcuts. They are intentionally ignored while typing in form fields (`input` / `textarea` / `select` / `contenteditable`) and while any real modifier (`Cmd` / `Ctrl` / `Alt`) is held, so they never steal text input or browser shortcuts. Window blur clears both keys to avoid stuck-down state.
@@ -95,3 +97,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [0.1.0]: https://github.com/rosoam/peekly/releases/tag/v0.1.0
 [0.2.0]: https://github.com/rosoam/peekly/releases/tag/v0.2.0
+[0.3.0]: https://github.com/rosoam/peekly/releases/tag/v0.3.0
