@@ -91,7 +91,7 @@ Hold the y key, hover any element, and Peekly highlights the React component und
   • Hints for inline functions in props, dangerouslySetInnerHTML, very long classNames
   • Owner chain with clickable source links
 
-Hold y + x while hovering for a contextual tooltip that follows the cursor — a mini debugger with tabs for Component / DOM / CSS / A11y. Release x to pin it; click outside to dismiss.
+Hold y + x while hovering for a contextual tooltip that follows the cursor — a mini debugger with tabs for Component / DOM / CSS / A11y. The tooltip is sticky: once it appears, you can release both keys and it stays on screen for interaction. Click outside or press Esc to dismiss.
 
 Plain letter keys are intentional — they're easy to reach with one hand and don't collide with the OS / browser shortcuts that real modifiers (Option, Shift, Ctrl) tend to clash with. Peekly never captures keys while you're typing in a form field.
 

@@ -62,7 +62,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
 feat: add Tailwind variant breakdown
-fix: hover stops updating after Alt was released and re-pressed
+fix: hover stops updating after y was released and re-pressed
 refactor: extract panel section builders into separate functions
 docs: clarify auto-on-localhost behavior
 chore: bump @crxjs/vite-plugin to 2.4.1
@@ -75,16 +75,20 @@ Before requesting review:
 - [ ] `bun run typecheck` passes
 - [ ] `bun run build` produces `dist/`
 - [ ] On `localhost:*` (e.g. a Vite React app):
-  - Hold `Option` → border appears on hovered React component
-  - `Option + click` → panel opens with source, props, navigation
+  - Hold `y` → border appears on hovered React component
+  - `y` + click → panel opens with source, props, navigation
+  - Hold `y + x` → contextual tooltip appears; release both keys → tooltip stays on screen (sticky)
+  - Click outside the tooltip → tooltip dismisses
+  - Re-press `y + x` while on a different element → live tracking resumes
+  - Typing in an `input` / `textarea` / `contenteditable` → `y` and `x` keystrokes are ignored (text input not stolen)
+  - Holding `Cmd` / `Ctrl` / `Alt` while pressing `y` → no picker (browser shortcuts not hijacked)
   - "Open in" button opens the file at the right line
   - Drag the panel header → it moves
   - Click the component name → text is selected
   - Copy icon next to name → name is in clipboard
   - "Copy all" → readable summary in clipboard
   - "Highlight all instances" icon → multiple dashed boxes appear
-  - `Option + Shift` + move → outline mode
-  - `Esc` → panel closes
+  - `Esc` → panel and tooltip both close
 - [ ] On a non-localhost site, with **Active** off → no highlight, no panel
 - [ ] On a non-localhost site, with **Active** on → picker works
 

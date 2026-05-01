@@ -15,7 +15,7 @@ No need to open DevTools. No need to switch tabs. Peekly lives quietly in the ba
 ## What it does
 
 - **Hover with `y`** → an indigo border highlights the **React component** under the cursor (real bounding box, not just the DOM element under the pointer).
-- **Hover with `y + x`** → adds a **floating contextual tooltip** near the cursor with tabs (`Comp` / `DOM` / `CSS` / `A11y`). Release `x` to **pin** it for interaction.
+- **Hover with `y + x`** → adds a **floating contextual tooltip** near the cursor with tabs (`Comp` / `DOM` / `CSS` / `A11y`). The tooltip is **sticky**: once it appears, releasing the keys leaves it on screen so you can interact with it. Click outside or press `Esc` to dismiss it. Re-pressing `y + x` resumes live cursor tracking for a fresh inspection.
 - **`y` + click** → a floating panel opens with everything you need:
   - **Source file** with one-click open in **VS Code / Cursor / WebStorm / Sublime**
   - **Parent and children navigation** (chips you can click to re-inspect — no need to move the mouse)
@@ -80,10 +80,11 @@ _Coming soon._
    - **Active** — pick on every site (off by default)
    - **Auto-on localhost** — automatically active on `localhost`, `127.0.0.1`, `*.localhost` (**on by default**)
    - **Editor** — VS Code / Cursor / WebStorm / Sublime / None (drives the "Open in" button)
-3. On any React app:
+3. On any supported page (React, Preact, Vue 3, Lit, Livewire, Alpine.js, Twig, or plain DOM):
    - Hold `y` and move the cursor → indigo highlight + component name
-   - Click → inspector panel
-   - `Esc` closes it
+   - Hold `y + x` → contextual tooltip appears next to the cursor; it stays after you release the keys
+   - `y` + click → full inspector panel opens
+   - Click outside the tooltip / panel, or press `Esc`, to dismiss
 
 ## How it works
 

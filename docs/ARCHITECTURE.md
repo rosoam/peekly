@@ -152,31 +152,34 @@ The tooltip is a small floating debugger that appears next to the cursor. Its st
 
 ```
               ┌──────────┐
-              │  hidden  │
-              └────┬─────┘
-                   │ y + x + mousemove on page
-                   ▼
-              ┌──────────┐
-              │ tracking │ ◄──┐
-              └────┬─────┘    │ cursor leaves tooltip back into page
-                   │           │
-                   │ cursor enters tooltip       │
-                   ▼           │
-              ┌──────────┐ ────┘
-              │frozen    │
-              │(in-tooltip)│
-              └────┬─────┘
-                   │ x released (y still held)
-                   ▼
-              ┌──────────┐
-              │  pinned  │ ◄── interactive, click to use tabs
-              └────┬─────┘
-                   │ click outside / Esc
-                   ▼
-              ┌──────────┐
-              │  hidden  │
-              └──────────┘
+              │  hidden  │ ◄────────────┐
+              └────┬─────┘              │
+                   │ y + x held         │ click outside  /  Esc
+                   │ + mousemove        │
+                   ▼                    │
+              ┌──────────┐              │
+              │ tracking │ ────────────►│
+              └────┬─────┘              │
+                   │ cursor enters      │
+                   │ tooltip            │
+                   ▼                    │
+              ┌──────────┐              │
+              │  frozen  │ ────────────►│
+              │(in-tooltip)             │
+              └────┬─────┘              │
+                   │ y or x released    │
+                   ▼                    │
+              ┌──────────┐              │
+              │  pinned  │ ─────────────┘
+              │(sticky,  │
+              │ interactive)            │
+              └────┬─────┘              │
+                   │ y + x re-pressed   │
+                   │ on a new element   │
+                   └──────► tracking
 ```
+
+Once the tooltip is visible (in `tracking` or `frozen`), releasing **either** key transitions to `pinned` — the tooltip stays on screen. The user dismisses it explicitly (click outside or `Esc`). Re-pressing `y + x` while moving over a different element resumes live tracking for a fresh inspection.
 
 `y` and `x` are letter keys, not OS modifiers — `src/content/main.ts` tracks press/release manually via `keydown` / `keyup`. Handlers ignore the keys when the focus target is editable (`input`, `textarea`, `select`, `contenteditable`) and when any real modifier is held (`Cmd` / `Ctrl` / `Alt`), so they never steal text input or fight native shortcuts. `window.blur` clears both flags so a tab switch can't leave the picker stuck on.
 
