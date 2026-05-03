@@ -160,6 +160,10 @@ export const netPanelCss = `
   margin-left: auto;
   margin-right: 4px;
   display: flex;
+  transition: width 0.18s ease;
+}
+.np-search-wrap:focus-within {
+  width: 210px;
 }
 .np-search-input {
   width: 100%;
