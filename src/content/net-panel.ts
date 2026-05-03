@@ -1,5 +1,5 @@
 import { getState, subscribe, clearAll, addDriftEvent, addAnomalyEvent } from '../net/store';
-import type { RequestEntry } from '../net/types';
+import type { RequestEntry, N1Hit } from '../net/types';
 import { smartLabel } from '../net/analysis/smart-labels';
 import { detectGraphQL } from '../net/analysis/graphql';
 import { extractJwtTokens, extractCookies, hasJwtOrCookies } from '../net/analysis/jwt';
@@ -51,6 +51,13 @@ function formatDuration(d: number): string {
   if (!d) return '—';
   if (d < 1000) return `${Math.round(d)}ms`;
   return `${(d / 1000).toFixed(2)}s`;
+}
+
+function normalizePath(path: string): string {
+  return path
+    .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id')
+    .replace(/\/[0-9a-f]{24,}/gi, '/:id')
+    .replace(/\/[0-9]+/g, '/:id');
 }
 
 function escapeHtml(s: string): string {
@@ -151,6 +158,47 @@ function buildDebugBundle(r: RequestEntry): string {
     ``,
     sep,
   ].join('\n');
+}
+
+function buildN1DebugBundle(hits: N1Hit[], requests: RequestEntry[]): string {
+  const sep = '─'.repeat(60);
+  const lines: string[] = [
+    sep,
+    `Peekly — N+1 Debug Bundle`,
+    `Generated: ${new Date().toLocaleString()}   |   Patterns: ${hits.length}`,
+    sep,
+  ];
+  for (const hit of hits) {
+    const matching = requests.filter(
+      (r) => r.method === hit.method && normalizePath(r.path) === hit.template,
+    );
+    const durations = matching.map((r) => r.duration);
+    const avgDur = durations.length
+      ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+      : 0;
+    const totalDur = durations.reduce((a, b) => a + b, 0);
+    const minTs = matching.length ? Math.min(...matching.map((r) => r.timestamp)) : 0;
+    const maxTs = matching.length ? Math.max(...matching.map((r) => r.timestamp)) : hit.lastSeen;
+    const burstMs = maxTs - minTs;
+    const burstStr = burstMs < 1000 ? `${burstMs}ms` : `${(burstMs / 1000).toFixed(1)}s`;
+    lines.push(
+      ``,
+      `${hit.method}  ${hit.template}`,
+      `  Calls       ${hit.count}× in ${burstStr}`,
+      `  Avg dur     ${avgDur}ms`,
+      `  Total time  ${totalDur}ms`,
+      `  First seen  ${new Date(minTs).toLocaleTimeString()}`,
+      `  Last seen   ${new Date(maxTs).toLocaleTimeString()}`,
+      ``,
+      `  Requests (${matching.length}):`,
+      ...matching.map(
+        (r, i) =>
+          `    ${String(i + 1).padStart(2)}  ${String(r.status || '—').padStart(3)}  ${r.path}${r.query ? '?' + r.query : ''}  ${r.duration}ms`,
+      ),
+    );
+  }
+  lines.push(``, sep);
+  return lines.join('\n');
 }
 
 function decodeUnixTime(v: unknown): string | null {
@@ -433,6 +481,7 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
   const overlayCloseBtn = makeEl('button', 'np-overlay-close-btn', '×');
   overlayCloseBtn.type = 'button';
   const overlayBody = makeEl('div', 'np-overlay-body');
+  let overlayHeaderAction: HTMLElement | null = null;
   overlayHead.appendChild(overlayTitleEl);
   overlayHead.appendChild(overlayCloseBtn);
   overlayCard.appendChild(overlayHead);
@@ -871,7 +920,7 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
       csHeader.appendChild(makeEl('span', 'np-kv-label', 'Call stack'));
       const csAllCopy = makeEl('button', 'np-cs-copy-all', 'Copy all');
       (csAllCopy as HTMLButtonElement).type = 'button';
-      csAllCopy.addEventListener('click', () => onCopy(r.callStack!.join('\n')));
+      csAllCopy.addEventListener('click', () => void opts.onCopy(r.callStack!.join('\n')));
       csHeader.appendChild(csAllCopy);
       pOverview.appendChild(csHeader);
 
@@ -883,7 +932,7 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
         text.title = frame;
         const copyBtn = makeEl('button', 'np-cs-copy', 'Copy');
         (copyBtn as HTMLButtonElement).type = 'button';
-        copyBtn.addEventListener('click', () => onCopy(frame));
+        copyBtn.addEventListener('click', () => void opts.onCopy(frame));
         row.append(idx, text, copyBtn);
         stackWrap.appendChild(row);
       });
@@ -1185,9 +1234,22 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
   }
 
   // ─── Overlay helpers ──────────────────────────────────────────
-  function openOverlay(title: string, renderFn: (container: HTMLElement) => void, wide = false): void {
+  function openOverlay(
+    title: string,
+    renderFn: (container: HTMLElement) => void,
+    wide = false,
+    headerAction?: HTMLElement,
+  ): void {
     overlayTitleEl.textContent = title;
     overlayBody.innerHTML = '';
+    if (overlayHeaderAction) {
+      overlayHeaderAction.remove();
+      overlayHeaderAction = null;
+    }
+    if (headerAction) {
+      overlayCloseBtn.before(headerAction);
+      overlayHeaderAction = headerAction;
+    }
     overlayCard.classList.toggle('np-chart-card', wide);
     renderFn(overlayBody);
     overlay.classList.remove('hidden');
@@ -1198,49 +1260,87 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
   }
 
   function openN1Overlay(): void {
+    const st = getState();
+    const hasHits = st.n1Hits.length > 0;
+    const copyAllBtn = hasHits ? makeEl('button', 'np-overlay-head-action', 'Copy all') : undefined;
+
     openOverlay('N+1 Patterns', (body) => {
-      const st = getState();
-      if (!st.n1Hits.length) {
+      if (!hasHits) {
         body.appendChild(makeEl('div', 'np-intel-empty', 'No N+1 patterns detected'));
         return;
       }
+      body.addEventListener('wheel', (ev) => ev.stopPropagation(), { passive: true });
+
       for (const hit of st.n1Hits) {
+        const matching = st.requests.filter(
+          (r) => r.method === hit.method && normalizePath(r.path) === hit.template,
+        );
+        const durations = matching.map((r) => r.duration);
+        const avgDur = durations.length
+          ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
+          : 0;
+        const totalDur = durations.reduce((a, b) => a + b, 0);
+        const minTs = matching.length ? Math.min(...matching.map((r) => r.timestamp)) : 0;
+        const maxTs = matching.length ? Math.max(...matching.map((r) => r.timestamp)) : hit.lastSeen;
+        const burstMs = maxTs - minTs;
+        const burstStr = burstMs < 1000 ? `${burstMs}ms` : `${(burstMs / 1000).toFixed(1)}s`;
+        const severity = hit.count >= 10 ? 'critical' : hit.count >= 5 ? 'high' : 'moderate';
+
         const group = makeEl('div', 'np-n1-group');
+
         const epRow = makeEl('div', 'np-n1-ep-row');
         epRow.appendChild(makeEl('span', `np-method-badge ${methodClass(hit.method)}`, hit.method));
         epRow.appendChild(makeEl('span', 'np-n1-template', hit.template));
-        epRow.appendChild(makeEl('span', 'np-n1-count', `×${hit.count} in 3s`));
+        epRow.appendChild(makeEl('span', `np-n1-count np-n1-sev-${severity}`, `×${hit.count} in ${burstStr}`));
         group.appendChild(epRow);
 
-        const matching = st.requests.filter(
-          (r) =>
-            r.method === hit.method &&
-            r.path
-              .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id')
-              .replace(/\/[0-9a-f]{24,}/gi, '/:id')
-              .replace(/\/[0-9]+/g, '/:id') === hit.template,
-        );
+        const statsRow = makeEl('div', 'np-n1-stats-row');
+        for (const [label, value] of [
+          ['avg', `${avgDur}ms`],
+          ['total', formatDuration(totalDur)],
+          ['first', new Date(minTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })],
+          ['last', new Date(maxTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })],
+        ] as [string, string][]) {
+          const chip = makeEl('span', 'np-n1-stat');
+          const labelEl = makeEl('span', 'np-n1-stat-label', label);
+          chip.appendChild(labelEl);
+          chip.appendChild(document.createTextNode(value));
+          statsRow.appendChild(chip);
+        }
+        group.appendChild(statsRow);
 
         const rList = makeEl('div', 'np-n1-req-list');
         for (const r of matching.slice(0, 8)) {
           const row = makeEl('div', 'np-n1-req-row');
           row.appendChild(makeEl('span', `np-rr-status ${statusClass(r.status)}`, String(r.status || '—')));
-          const pathEl = makeEl('span', 'np-n1-path', r.path);
-          row.appendChild(pathEl);
+          row.appendChild(makeEl('span', 'np-n1-path', r.path));
           row.appendChild(makeEl('span', 'np-rr-dur', formatDuration(r.duration)));
           row.addEventListener('click', () => { selectRequest(r.id); closeOverlay(); });
           rList.appendChild(row);
         }
         if (matching.length > 8) {
-          rList.appendChild(makeEl('div', 'np-n1-more', `+${matching.length - 8} more`));
+          rList.appendChild(makeEl('div', 'np-n1-more', `+${matching.length - 8} more identical calls`));
         }
         group.appendChild(rList);
-        group.appendChild(
-          makeEl('div', 'np-n1-hint', '→ Batch these via a bulk endpoint or DataLoader pattern'),
-        );
+
+        const hints: Record<string, string> = {
+          moderate: '→ Consider batching or adding a client-side cache to deduplicate.',
+          high: '→ High frequency — batch via a bulk endpoint or DataLoader pattern.',
+          critical: '→ Critical: deduplicate immediately with request memoization or server-side batching.',
+        };
+        group.appendChild(makeEl('div', 'np-n1-hint', hints[severity]));
         body.appendChild(group);
       }
-    });
+    }, false, copyAllBtn);
+
+    if (copyAllBtn) {
+      copyAllBtn.addEventListener('click', () => {
+        const bundle = buildN1DebugBundle(st.n1Hits, st.requests);
+        navigator.clipboard.writeText(bundle).catch(() => {});
+        copyAllBtn.textContent = 'Copied!';
+        setTimeout(() => { copyAllBtn.textContent = 'Copy all'; }, 1500);
+      });
+    }
   }
 
   function openErrorsOverlay(): void {

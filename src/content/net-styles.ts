@@ -830,6 +830,19 @@ export const netPanelCss = `
   display: flex; align-items: center; justify-content: center;
 }
 .np-overlay-close-btn:hover { background: rgba(255,255,255,0.14); color: rgba(255,255,255,0.9); }
+.np-overlay-head-action {
+  background: rgba(10,132,255,0.12);
+  border: 1px solid rgba(10,132,255,0.25);
+  color: rgba(10,132,255,0.9);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+.np-overlay-head-action:hover { background: rgba(10,132,255,0.22); color: #0a84ff; }
 .np-overlay-body {
   flex: 1;
   overflow-y: auto;
@@ -1026,6 +1039,31 @@ export const netPanelCss = `
   flex-shrink: 0;
 }
 .np-err-count { color: var(--np-red); background: rgba(255,69,58,0.1); }
+.np-n1-sev-high { color: #ff6b35; background: rgba(255,107,53,0.12); }
+.np-n1-sev-critical { color: var(--np-red); background: rgba(255,69,58,0.12); }
+.np-n1-stats-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.np-n1-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: rgba(235,235,245,0.65);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 4px;
+  padding: 1px 7px;
+}
+.np-n1-stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(235,235,245,0.35);
+}
 .np-n1-req-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
 .np-n1-req-row {
   display: flex;
