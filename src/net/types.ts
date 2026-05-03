@@ -18,6 +18,7 @@ export type RequestEntry = {
   duration: number;
   type: 'http';
   component?: string;
+  callStack?: string[];
 };
 
 export type DriftEvent = {

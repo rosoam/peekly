@@ -842,6 +842,7 @@ export const overlayCss = `
 .tt-body {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 10px 12px;
   display: flex;
   flex-direction: column;

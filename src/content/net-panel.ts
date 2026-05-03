@@ -203,6 +203,7 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
   // Build root element.
   const panel = makeEl('div', 'net-panel');
   panel.tabIndex = -1;
+  panel.addEventListener('wheel', (ev) => ev.stopPropagation(), { passive: true });
 
   // ─── Titlebar ──────────────────────────────────────────────────
   const titlebar = makeEl('div', 'np-titlebar');
@@ -863,6 +864,30 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
     if (insights.length) {
       pOverview.appendChild(makeEl('div', 'np-kv-label', 'Insights'));
       for (const c of insights) pOverview.appendChild(c);
+    }
+
+    // Call stack
+    if (r.callStack && r.callStack.length > 0) {
+      pOverview.appendChild(makeEl('div', 'np-kv-label', 'Call stack'));
+      const stackWrap = makeEl('div', 'np-callstack');
+      r.callStack.forEach((frame, i) => {
+        const row = makeEl('div', 'np-cs-row');
+        const idx = makeEl('span', 'np-cs-idx', String(i));
+        const text = makeEl('span', 'np-cs-frame', frame);
+        text.title = frame;
+        const copyBtn = makeEl('button', 'np-cs-copy', 'Copy');
+        (copyBtn as HTMLButtonElement).type = 'button';
+        copyBtn.addEventListener('click', () => {
+          void navigator.clipboard.writeText(frame).then(
+            () => onCopy(frame),
+            () => {},
+          );
+        });
+        row.append(idx, text, copyBtn);
+        stackWrap.appendChild(row);
+      });
+      addCopyBtn(stackWrap, () => r.callStack!.join('\n'));
+      pOverview.appendChild(stackWrap);
     }
   }
 

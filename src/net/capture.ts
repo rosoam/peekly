@@ -34,31 +34,47 @@ function postEntry(entry: RequestEntry): void {
   window.postMessage({ source: NET_SOURCE, kind: 'net-request', data: entry }, '*');
 }
 
-function getComponentFromStack(): string | undefined {
+const SKIP_INTERNALS = [
+  'capture.ts', 'at new Promise', 'at XMLHttpRequest',
+  '<anonymous>', 'node_modules/', 'webpack-internal:', 'webpack://',
+  'at Object.<', 'at Module.<', 'at __webpack',
+];
+
+function formatFrame(line: string): string | null {
+  if (!line.includes(' at ')) return null;
+  if (SKIP_INTERNALS.some((s) => line.includes(s))) return null;
+  return line.trim().replace(/^at /, '');
+}
+
+function getStackInfo(): { component: string | undefined; callStack: string[] } {
+  let component: string | undefined;
+  const callStack: string[] = [];
   try {
     const lines = (new Error().stack ?? '').split('\n');
     for (const line of lines) {
-      if (
-        line.includes('capture.ts') ||
-        line.includes('at new Promise') ||
-        line.includes('at XMLHttpRequest') ||
-        line.includes('<anonymous>') ||
-        !line.includes(' at ')
-      ) continue;
-      // PascalCase function = likely a React/Vue component
-      const m = line.match(/at (?:new )?([A-Z][a-zA-Z0-9$]+)[\s.(]/);
-      if (
-        m?.[1] &&
-        !['Object', 'Array', 'Promise', 'Error', 'Map', 'Set', 'Function'].includes(m[1])
-      ) return m[1];
-      // File path hint: /components/MyComponent.tsx
-      const f = line.match(
-        /\/(?:component|page|view|screen|feature)s?\/([A-Za-z][A-Za-z0-9_-]+)\./,
-      );
-      if (f?.[1]) return f[1];
+      if (!line.includes(' at ')) continue;
+      if (SKIP_INTERNALS.some((s) => line.includes(s))) continue;
+
+      // Collect meaningful frames (cap at 12)
+      if (callStack.length < 12) {
+        const frame = formatFrame(line);
+        if (frame) callStack.push(frame);
+      }
+
+      // First PascalCase function = component
+      if (!component) {
+        const m = line.match(/at (?:new )?([A-Z][a-zA-Z0-9$]+)[\s.(]/);
+        if (m?.[1] && !['Object', 'Array', 'Promise', 'Error', 'Map', 'Set', 'Function'].includes(m[1])) {
+          component = m[1];
+        }
+        if (!component) {
+          const f = line.match(/\/(?:component|page|view|screen|feature)s?\/([A-Za-z][A-Za-z0-9_-]+)\./);
+          if (f?.[1]) component = f[1];
+        }
+      }
     }
   } catch { /* ignore */ }
-  return undefined;
+  return { component, callStack };
 }
 
 export function initNetworkCapture(): void {
@@ -80,7 +96,7 @@ export function initNetworkCapture(): void {
     }
 
     const { path, query, host } = parseUrl(reqUrl);
-    const component = getComponentFromStack();
+    const { component, callStack } = getStackInfo();
     const method = (
       init?.method ??
       (typeof input === 'object' && 'method' in input ? input.method : 'GET') ??
@@ -152,6 +168,7 @@ export function initNetworkCapture(): void {
         query,
         host,
         component,
+        callStack,
         requestHeaders: reqHeaders,
         requestBody: capBody(reqBody),
         requestBodySize: reqBody.length,
@@ -175,6 +192,7 @@ export function initNetworkCapture(): void {
       query,
       host,
       component,
+      callStack,
       requestHeaders: reqHeaders,
       requestBody: capBody(reqBody),
       requestBodySize: reqBody.length,
@@ -237,7 +255,7 @@ export function initNetworkCapture(): void {
     }
 
     const { path, query, host } = parseUrl(reqUrl);
-    const component = getComponentFromStack();
+    const { component, callStack } = getStackInfo();
     let reqBody = '';
     if (body && typeof body === 'string') reqBody = body;
 
@@ -265,6 +283,7 @@ export function initNetworkCapture(): void {
         query,
         host,
         component,
+        callStack,
         requestHeaders: this._pHeaders ?? {},
         requestBody: capBody(reqBody),
         requestBodySize: reqBody.length,

@@ -597,6 +597,7 @@ export function createTooltip(
   const el = document.createElement('div');
   el.className = 'tooltip';
   el.style.display = 'none';
+  el.addEventListener('wheel', (ev) => ev.stopPropagation(), { passive: true });
 
   const header = document.createElement('div');
   header.className = 'tt-header';

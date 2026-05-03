@@ -200,6 +200,7 @@ export const netPanelCss = `
 .np-req-list {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: thin;
 }
 .np-req-list::-webkit-scrollbar { width: 8px; }
@@ -418,6 +419,7 @@ export const netPanelCss = `
 .np-tab-panels {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 10px 14px;
   scrollbar-width: thin;
 }
@@ -571,6 +573,67 @@ export const netPanelCss = `
 }
 .np-intel-content::-webkit-scrollbar { width: 8px; }
 .np-intel-content::-webkit-scrollbar-thumb { background: var(--np-bg-control); border-radius: 4px; }
+/* ─── Call stack ─────────────────────────────────────────────────── */
+.np-callstack {
+  background: var(--np-bg-elevated);
+  border: 1px solid var(--np-sep-2);
+  border-radius: 6px;
+  padding: 6px 0;
+  margin-top: 4px;
+  font-family: 'SF Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+}
+
+.np-cs-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 3px;
+  transition: background 0.08s;
+}
+.np-cs-row:hover { background: var(--np-bg-hover); }
+.np-cs-row:hover .np-cs-copy { opacity: 1; }
+
+.np-cs-idx {
+  color: var(--np-label-3);
+  min-width: 16px;
+  text-align: right;
+  flex-shrink: 0;
+  font-size: 9.5px;
+}
+
+.np-cs-frame {
+  flex: 1;
+  color: var(--np-label-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.np-cs-frame:first-line { color: rgba(255,255,255,0.9); }
+
+.np-cs-copy {
+  opacity: 0;
+  flex-shrink: 0;
+  padding: 0 5px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.4);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 100ms, color 100ms, opacity 100ms;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+.np-cs-copy:hover {
+  background: rgba(99,102,241,0.15);
+  color: #c7d2fe;
+  border-color: rgba(99,102,241,0.35);
+}
+
 .np-intel-card {
   background: var(--np-bg-elevated);
   border: 1px solid var(--np-sep-2);
