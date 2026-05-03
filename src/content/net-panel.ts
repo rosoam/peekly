@@ -343,9 +343,6 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
     filterSearch = searchInput.value;
     refreshList();
   });
-  let searchFocused = false;
-  searchInput.addEventListener('focus', () => { searchFocused = true; });
-  searchInput.addEventListener('blur', () => { searchFocused = false; });
   searchWrap.appendChild(searchInput);
   ctrlbar.appendChild(searchWrap);
 
@@ -1689,7 +1686,7 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
       runAnalysisOnNew();
       refreshList();
     },
-    isInputFocused: () => searchFocused,
+    isInputFocused: () => shadow.activeElement === searchInput,
     destroy: () => panelDestroy(),
   };
 }
