@@ -221,7 +221,7 @@ function selectorOf(el: Element): string {
   return `<${tag}${id}${cls}>`;
 }
 
-function buildOpenTag(el: Element, copyOuterHtml: () => void): HTMLElement {
+function buildOpenTag(el: Element, copyOuterHtml: () => void, onCopy: (text: string) => void): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'tt-html';
 
@@ -260,17 +260,35 @@ function buildOpenTag(el: Element, copyOuterHtml: () => void): HTMLElement {
     wrap.append(closeRow);
   }
 
-  // Copy outerHTML icon button at top-right of the open tag
+  // Copy button group (outerHTML + classes) at top-right of the open tag
+  const copyGroup = document.createElement('div');
+  copyGroup.className = 'tt-html-copy-group';
+
+  const classes = (el.getAttribute('class') ?? '').trim();
+  if (classes) {
+    const copyClsBtn = document.createElement('button');
+    copyClsBtn.type = 'button';
+    copyClsBtn.className = 'tt-html-copy';
+    copyClsBtn.title = 'Copy classes';
+    copyClsBtn.textContent = 'Classes';
+    copyClsBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      onCopy(classes);
+    });
+    copyGroup.append(copyClsBtn);
+  }
+
   const copyBtn = document.createElement('button');
   copyBtn.type = 'button';
   copyBtn.className = 'tt-html-copy';
   copyBtn.title = 'Copy outerHTML';
-  copyBtn.textContent = 'Copy';
+  copyBtn.textContent = 'HTML';
   copyBtn.addEventListener('click', (ev) => {
     ev.stopPropagation();
     copyOuterHtml();
   });
-  head.append(copyBtn);
+  copyGroup.append(copyBtn);
+  head.append(copyGroup);
 
   return wrap;
 }
@@ -359,7 +377,45 @@ function renderDomTab(
   }
 
   // Open tag with attributes (selectable, scrollable values)
-  body.append(buildOpenTag(el, () => onCopy(el.outerHTML)));
+  body.append(buildOpenTag(el, () => onCopy(el.outerHTML), onCopy));
+
+  // Attributes table — quick copy per attribute
+  const domAttrs = Array.from(el.attributes);
+  if (domAttrs.length > 0) {
+    const secH = document.createElement('div');
+    secH.className = 'tt-section-h';
+    secH.textContent = `Attributes · ${domAttrs.length}`;
+    body.append(secH);
+
+    const table = document.createElement('table');
+    table.className = 'tt-attr-table';
+    for (const a of domAttrs) {
+      const tr = document.createElement('tr');
+      tr.className = 'tt-attr-row';
+      const tdName = document.createElement('td');
+      tdName.className = 'tt-attr-name';
+      tdName.textContent = a.name;
+      tdName.title = a.name;
+      const tdVal = document.createElement('td');
+      tdVal.className = 'tt-attr-val';
+      tdVal.textContent = a.value || '""';
+      tdVal.title = a.value;
+      const tdCopy = document.createElement('td');
+      const copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'tt-attr-copy-btn';
+      copyBtn.textContent = 'Copy';
+      const val = a.value;
+      copyBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        onCopy(val);
+      });
+      tdCopy.append(copyBtn);
+      tr.append(tdName, tdVal, tdCopy);
+      table.append(tr);
+    }
+    body.append(table);
+  }
 
   // Children navigation OR inline text content
   if (el.children.length > 0) {
@@ -558,7 +614,7 @@ export function createTooltip(
 
   const footer = document.createElement('div');
   footer.className = 'tt-footer';
-  footer.innerHTML = '<span class="tt-hint">Click element with <kbd>y</kbd> for full panel</span>';
+  footer.innerHTML = '<span class="tt-hint">Click while holding <kbd>x</kbd> to open full panel</span>';
 
   el.append(header, tabsEl, body, footer);
   shadow.append(el);

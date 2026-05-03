@@ -207,3 +207,29 @@ export const DEFAULT_SETTINGS: Settings = {
 export const SETTINGS_KEY = 'rp-settings';
 
 export type RuntimeMessage = { kind: 'open-editor'; url: string };
+
+export type NetRequestData = {
+  id: string;
+  timestamp: number;
+  method: string;
+  url: string;
+  path: string;
+  query: string;
+  host: string;
+  requestHeaders: Record<string, string>;
+  requestBody: string;
+  requestBodySize: number;
+  responseHeaders: Record<string, string>;
+  responseBody: string;
+  responseBodySize: number;
+  status: number;
+  duration: number;
+  type: 'http';
+  component?: string;
+};
+
+export type NetRequestMessage = {
+  source: 'peekly-net';
+  kind: 'net-request';
+  data: NetRequestData;
+};

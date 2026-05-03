@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-03
+
+### Added
+
+- **Network Inspector** (`y` to toggle) — a floating draggable panel that captures every `fetch` and `XMLHttpRequest` call made by the page in real time, without any proxy or DevTools Protocol required. The capture runs entirely in the MAIN world by patching `window.fetch` and `window.XMLHttpRequest`; captured entries travel over `postMessage` to the isolated-world store before being displayed.
+
+  Request entries carry: id, timestamp, method, URL (path + query + host), request headers and body, response headers and body, HTTP status, duration, and a component attribution derived from the call-site stack trace.
+
+  Panel features:
+  - **Request list** with method badge, path, smart human-readable label (e.g. "GET users" instead of "GET /api/v1/users"), status, and duration. Slow rows are highlighted in orange.
+  - **Filter bar**: text search, method filter (GET / POST / PUT / DELETE / PATCH), status filter (2xx / 4xx / 5xx), slow-only toggle.
+  - **Selected request**: blue left border and stronger background for at-a-glance identification.
+  - **Request detail tabs**: Overview, Request (headers + body), Response (headers + body), TypeScript interface (generated from the JSON response body), GraphQL (operation type, name, variables, and errors — tab shown only when applicable).
+  - **Copy buttons** in every tab: Copy headers, Copy body, Copy all.
+  - **Footer badges**: error count, slow count, N+1 warning, drift indicator, anomaly indicator.
+  - **N+1 badge** — click to open a detail overlay with a stacked bar chart of the repeated calls.
+  - **Request chart overlay** with a stats bar (total / avg / p95 / errors / slow) and two views: Timeline (scatter plot with p95 + 500 ms reference lines) and Waterfall (rows with method badge, path, and horizontal duration bar).
+  - **Related Requests section** — when the component inspector (opened via `x` + click) is active, shows requests where the component attribution matches the currently inspected component.
+
+  Analysis modules (all in `src/net/analysis/`):
+  - `smart-labels.ts` — humanizes request paths.
+  - `graphql.ts` — detects and parses GraphQL requests (operation type, name, variables, errors).
+  - `jwt.ts` — extracts JWT tokens and cookies from request/response headers.
+  - `typescript-gen.ts` — generates a TypeScript interface from a JSON response body.
+  - `drift.ts` — detects schema drift across repeated calls to the same endpoint.
+  - `anomaly.ts` — flags statistical anomalies in response times.
+
+- **Tooltip DOM tab improvements** — the DOM tab in the contextual tooltip now has a **Copy HTML** + **Copy classes** button group (replacing the single "Copy" button) and an attributes table with per-attribute rows showing name, truncated value, and an individual copy button on each row.
+
+### Changed
+
+- **Key bindings** — the binding scheme has been simplified:
+  - **`x` held** activates the component picker: hover any element to get the indigo highlight and the contextual tooltip floating near the cursor. Click to open the full inspector panel. This replaces the old `y` (hover) and `y + x` (tooltip) combination — `x` alone does everything.
+  - **`y` keypress** toggles the Network Inspector panel.
+  - **`Esc`** closes all overlays (tooltip, component panel, Network Inspector panel).
+  - The `y + x` combo for the tooltip is gone; `y` is now exclusively the Network Inspector toggle.
+
 ## [0.3.0] - 2026-05-01
 
 ### Changed
@@ -98,3 +135,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.0]: https://github.com/rosoam/peekly/releases/tag/v0.1.0
 [0.2.0]: https://github.com/rosoam/peekly/releases/tag/v0.2.0
 [0.3.0]: https://github.com/rosoam/peekly/releases/tag/v0.3.0
+[0.4.0]: https://github.com/rosoam/peekly/releases/tag/v0.4.0

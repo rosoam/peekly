@@ -17,13 +17,18 @@ import type {
   InspectByIdRequest,
   InspectRequest,
   InspectResponse,
+  NetRequestMessage,
   Rect,
   RenderTickEvent,
   Settings,
   SubscribeRendersRequest,
   UnsubscribeRendersRequest,
 } from '../shared/messages';
+import { addRequest, getState } from '../net/store';
+import type { RequestEntry } from '../net/types';
 import { overlayCss } from './styles';
+import { renderNetPanel } from './net-panel';
+import type { NetPanelHandle } from './net-panel';
 import {
   type PanelHandle,
   renderPanel,
@@ -44,6 +49,8 @@ type State = {
   panelHandle: PanelHandle | null;
   panelPos: { x: number; y: number } | null;
   outlineMode: boolean;
+  netPanelOpen: boolean;
+  netPanelHandle: NetPanelHandle | null;
 };
 
 const isTopFrame = window === window.top;
@@ -58,6 +65,8 @@ const state: State = {
   panelHandle: null,
   panelPos: null,
   outlineMode: false,
+  netPanelOpen: false,
+  netPanelHandle: null,
 };
 
 function isLocalhostHost(): boolean {
@@ -596,6 +605,69 @@ function showInspectResult(info: ComponentInfo, el: Element | null): void {
   });
   state.panelHandle = handle;
 
+  // Inject Related Requests section when component has captured network activity.
+  if (info.name) {
+    const relatedReqs = getState().requests.filter((r) => r.component === info.name);
+    if (relatedReqs.length > 0) {
+      const panelEl = shadow.querySelector('.panel') as HTMLElement | null;
+      if (panelEl) {
+        const section = document.createElement('div');
+        section.style.cssText =
+          'border-top:1px solid rgba(255,255,255,0.08);padding:10px 14px 12px;';
+
+        const heading = document.createElement('div');
+        heading.textContent = `Related Requests (${relatedReqs.length})`;
+        heading.style.cssText =
+          'font-size:10.5px;font-weight:600;color:rgba(235,235,245,0.4);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:7px;';
+        section.appendChild(heading);
+
+        for (const r of relatedReqs.slice(0, 8)) {
+          const row = document.createElement('div');
+          row.style.cssText =
+            'display:flex;align-items:center;gap:6px;padding:3px 0;font-size:11.5px;';
+
+          const mColor =
+            r.method === 'GET'
+              ? '#32d74b'
+              : r.method === 'POST'
+                ? '#0a84ff'
+                : r.method === 'DELETE'
+                  ? '#ff453a'
+                  : '#ff9f0a';
+          const mEl = document.createElement('span');
+          mEl.textContent = r.method;
+          mEl.style.cssText = `color:${mColor};font-weight:700;font-size:10px;min-width:38px;`;
+
+          const pEl = document.createElement('span');
+          pEl.textContent = r.path + (r.query ? `?${r.query}` : '');
+          pEl.style.cssText =
+            'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace;color:rgba(255,255,255,0.68);';
+
+          const sEl = document.createElement('span');
+          sEl.textContent = r.status ? String(r.status) : '—';
+          sEl.style.cssText = `color:${r.status >= 500 ? '#ff453a' : r.status >= 400 ? '#ff9f0a' : '#32d74b'};font-size:10.5px;min-width:28px;text-align:right;`;
+
+          const dEl = document.createElement('span');
+          dEl.textContent = r.duration < 1000 ? `${r.duration}ms` : `${(r.duration / 1000).toFixed(2)}s`;
+          dEl.style.cssText = `font-size:10.5px;color:${r.duration > 500 ? '#ff9f0a' : 'rgba(235,235,245,0.3)'};min-width:48px;text-align:right;`;
+
+          row.append(mEl, pEl, sEl, dEl);
+          section.appendChild(row);
+        }
+
+        if (relatedReqs.length > 8) {
+          const more = document.createElement('div');
+          more.textContent = `+${relatedReqs.length - 8} more — open Network Inspector (<) for full view`;
+          more.style.cssText =
+            'font-size:10.5px;color:rgba(235,235,245,0.28);margin-top:5px;font-style:italic;';
+          section.appendChild(more);
+        }
+
+        panelEl.appendChild(section);
+      }
+    }
+  }
+
   // Subscribe to live re-render counts.
   if (info.fiberId) {
     const sub: SubscribeRendersRequest = {
@@ -626,10 +698,8 @@ function showInspectError(message: string): void {
 // stable while the cursor stays within the same element.
 let tooltipTargetEl: Element | null = null;
 
-// Modifier-key state. We use plain letter keys (y / x) instead of OS modifiers
-// (Option/Shift) to avoid clashing with native browser/OS shortcuts. They aren't
-// real modifiers, so press/release is tracked manually via key events.
-let yDown = false;
+// Modifier-key state. Hold X or Y to activate the component picker (hover + tooltip).
+// Click while held to open the full inspector panel.
 let xDown = false;
 
 function isEditingTarget(target: EventTarget | null): boolean {
@@ -640,8 +710,15 @@ function isEditingTarget(target: EventTarget | null): boolean {
   return false;
 }
 
+// composedPath()[0] pierces shadow DOM — ev.target is retargeted to the host when
+// focus sits inside a closed shadow root (e.g. the net panel search field).
+function isEditingEvent(ev: KeyboardEvent): boolean {
+  const actual = (ev.composedPath()[0] ?? ev.target) as EventTarget | null;
+  return isEditingTarget(actual);
+}
+
 function handleMouseMove(ev: MouseEvent): void {
-  if (!isPickerEnabled() || !yDown) {
+  if (!isPickerEnabled() || !xDown) {
     clearHighlight();
     if (!tooltip.isPinned()) tooltip.hide();
     return;
@@ -657,21 +734,15 @@ function handleMouseMove(ev: MouseEvent): void {
   state.hoverEl = el;
   scheduleHover(el, true);
 
-  // Tooltip activates when x is also held (in addition to the basic highlight).
-  if (xDown) {
-    if (el !== tooltipTargetEl) {
-      tooltipTargetEl = el;
-      tooltip.setVisible(true);
-      tooltip.update({
-        preview: previewFromCache(el),
-        targetEl: el,
-        cursor: { x: ev.clientX, y: ev.clientY },
-      });
-      // The bridge response will refine the preview shortly.
-    }
-  } else if (!tooltip.isPinned()) {
-    tooltip.hide();
-    tooltipTargetEl = null;
+  // Tooltip follows the cursor whenever X is held.
+  if (el !== tooltipTargetEl) {
+    tooltipTargetEl = el;
+    tooltip.setVisible(true);
+    tooltip.update({
+      preview: previewFromCache(el),
+      targetEl: el,
+      cursor: { x: ev.clientX, y: ev.clientY },
+    });
   }
 }
 
@@ -694,7 +765,7 @@ function previewFromCache(el: Element) {
 }
 
 function handleMouseDown(ev: MouseEvent): void {
-  if (!isPickerEnabled() || !yDown || ev.button !== 0) return;
+  if (!isPickerEnabled() || !xDown || ev.button !== 0) return;
   if (isInsideHost(ev.target)) return;
   const el = elementUnderCursor(ev.clientX, ev.clientY);
   if (!el) return;
@@ -713,14 +784,14 @@ function handleMouseDown(ev: MouseEvent): void {
 }
 
 function handleClick(ev: MouseEvent): void {
-  if (yDown && isPickerEnabled() && !isInsideHost(ev.target)) {
+  if (xDown && isPickerEnabled() && !isInsideHost(ev.target)) {
     ev.preventDefault();
     ev.stopPropagation();
   }
 }
 
 function handleAuxClick(ev: MouseEvent): void {
-  if (yDown && isPickerEnabled() && !isInsideHost(ev.target)) {
+  if (xDown && isPickerEnabled() && !isInsideHost(ev.target)) {
     ev.preventDefault();
     ev.stopPropagation();
   }
@@ -733,34 +804,62 @@ function handleKeyDown(ev: KeyboardEvent): void {
     setOutlineMode(false);
     tooltip.hide();
     tooltipTargetEl = null;
+    if (state.netPanelOpen) {
+      state.netPanelHandle?.destroy();
+      state.netPanelHandle = null;
+      state.netPanelOpen = false;
+    }
+  }
+
+  // Network panel toggle works regardless of picker enabled state.
+  if (!isEditingEvent(ev) && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+    if (ev.key.toLowerCase() === 'y' && !ev.repeat) {
+      toggleNetPanel();
+      return;
+    }
   }
 
   if (!isPickerEnabled()) return;
   // Don't intercept while the user is typing in a form field or composing text.
-  if (isEditingTarget(ev.target)) return;
-  // Don't fight native browser/OS shortcuts (e.g. Cmd+Y, Ctrl+X).
+  if (isEditingEvent(ev)) return;
+  // Don't fight native browser/OS shortcuts (e.g. Cmd+X, Ctrl+X).
   if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
 
-  const k = ev.key.toLowerCase();
-  if (k === 'y' && !yDown) {
-    yDown = true;
-  }
-  if (k === 'x') {
-    // Pressing x while y is held: unpin any previously-pinned tooltip so the
-    // tooltip resumes following the cursor for a fresh inspection.
-    if (yDown && tooltip.isPinned()) {
-      tooltip.setPinned(false);
-    }
+  if (ev.key.toLowerCase() === 'x' && !xDown) {
+    // Unpin any previously-pinned tooltip so it resumes following the cursor.
+    if (tooltip.isPinned()) tooltip.setPinned(false);
     xDown = true;
   }
 }
 
+function toggleNetPanel(): void {
+  if (state.netPanelOpen) {
+    state.netPanelHandle?.destroy();
+    state.netPanelHandle = null;
+    state.netPanelOpen = false;
+  } else {
+    const handle = renderNetPanel(shadow, {
+      onClose: () => {
+        state.netPanelHandle = null;
+        state.netPanelOpen = false;
+      },
+      onCopy: async (text: string) => {
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast(shadow, 'Copied');
+        } catch {
+          showToast(shadow, 'Copy failed');
+        }
+      },
+    });
+    state.netPanelHandle = handle;
+    state.netPanelOpen = true;
+  }
+}
+
 function handleKeyUp(ev: KeyboardEvent): void {
-  const k = ev.key.toLowerCase();
-  // Releasing y: hide highlight. If a tooltip is currently shown, pin it in place
-  // so the user can interact with it — they dismiss it via click-outside or Esc.
-  if (k === 'y') {
-    yDown = false;
+  if (ev.key.toLowerCase() === 'x') {
+    xDown = false;
     clearHighlight();
     if (tooltipTargetEl) {
       tooltip.setPinned(true);
@@ -769,19 +868,10 @@ function handleKeyUp(ev: KeyboardEvent): void {
       tooltipTargetEl = null;
     }
   }
-  // Releasing x: pin the tooltip if one is shown. This keeps the contextual menu
-  // alive after the user lets go of the keys; they dismiss it manually.
-  if (k === 'x') {
-    xDown = false;
-    if (tooltipTargetEl) {
-      tooltip.setPinned(true);
-    }
-  }
 }
 
 function handleBlur(): void {
   // Window lost focus: assume the keys are no longer held (we won't see keyup).
-  yDown = false;
   xDown = false;
   clearHighlight();
   setOutlineMode(false);
@@ -818,6 +908,15 @@ function handleClickAnywhere(ev: MouseEvent): void {
 
 function handleBridgeMessage(ev: MessageEvent): void {
   if (ev.source !== window) return;
+  const raw = ev.data as { source?: unknown; kind?: unknown } | null;
+  if (raw && raw.source === 'peekly-net') {
+    const netMsg = raw as NetRequestMessage;
+    if (netMsg.kind === 'net-request') {
+      addRequest(netMsg.data as RequestEntry);
+      state.netPanelHandle?.onNewRequest();
+    }
+    return;
+  }
   const data = ev.data as Partial<BridgeMessage> | null;
   if (!data || data.source !== RP_NAMESPACE) return;
   switch (data.kind) {

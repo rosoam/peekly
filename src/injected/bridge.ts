@@ -20,6 +20,7 @@ import type {
   SubscribeRendersRequest,
   UnsubscribeRendersRequest,
 } from '../shared/messages';
+import { initNetworkCapture } from '../net/capture';
 import { alpineAdapter } from './adapters/alpine';
 import { litAdapter } from './adapters/lit';
 import { livewireAdapter } from './adapters/livewire';
@@ -330,3 +331,5 @@ if (document.readyState === 'loading') {
   postReactDetection();
 }
 setTimeout(postReactDetection, 1500);
+
+initNetworkCapture();

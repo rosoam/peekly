@@ -1109,10 +1109,15 @@ export const overlayCss = `
   padding-top: 4px;
 }
 
-.tt-html-copy {
+.tt-html-copy-group {
   position: absolute;
   top: -2px;
   right: -2px;
+  display: flex;
+  gap: 3px;
+}
+
+.tt-html-copy {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.7);
@@ -1131,6 +1136,62 @@ export const overlayCss = `
   background: rgba(99, 102, 241, 0.18);
   color: #c7d2fe;
   border-color: rgba(99, 102, 241, 0.4);
+}
+
+/* Attributes table in DOM tab */
+.tt-attr-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 2px;
+  font-size: 11px;
+}
+
+.tt-attr-row td {
+  padding: 2px 0;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.tt-attr-row:last-child td {
+  border-bottom: none;
+}
+
+.tt-attr-name {
+  font-family: ui-monospace, monospace;
+  color: rgba(196, 181, 253, 0.85);
+  white-space: nowrap;
+  padding-right: 8px;
+  min-width: 72px;
+  max-width: 110px;
+}
+
+.tt-attr-val {
+  color: rgba(255,255,255,0.72);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tt-attr-copy-btn {
+  padding: 0 5px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.35);
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 100ms, color 100ms;
+}
+
+.tt-attr-copy-btn:hover {
+  background: rgba(99, 102, 241, 0.15);
+  color: #c7d2fe;
+  border-color: rgba(99, 102, 241, 0.35);
 }
 
 /* Children list — clickable to navigate */

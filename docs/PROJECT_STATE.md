@@ -1,4 +1,4 @@
-# Project state — 2026-04-30
+# Project state — 2026-05-03
 
 A live snapshot of where Peekly is, what's saved, what's pending, and how to pick it back up. Read this first when resuming.
 
@@ -8,12 +8,19 @@ A live snapshot of where Peekly is, what's saved, what's pending, and how to pic
 /Users/rso/Projects/peekly/
 ├── src/                      # The extension itself
 │   ├── content/              # ISOLATED-world content script + UI
+│   │   ├── net-panel.ts      # Network Inspector panel UI (new)
+│   │   └── net-styles.ts     # Network Inspector CSS (new)
 │   ├── injected/
-│   │   ├── bridge.ts         # MAIN-world orchestrator
+│   │   ├── bridge.ts         # MAIN-world orchestrator (calls initNetworkCapture)
 │   │   └── adapters/         # 8 framework adapters
+│   ├── net/                  # Network capture + analysis (new)
+│   │   ├── capture.ts        # fetch + XHR patching in MAIN world
+│   │   ├── store.ts          # isolated-world request store
+│   │   ├── types.ts          # RequestEntry type
+│   │   └── analysis/         # smart-labels, graphql, jwt, typescript-gen, drift, anomaly
 │   ├── popup/                # extension popup
 │   ├── background/           # MV3 service worker
-│   └── shared/               # cross-world types
+│   └── shared/               # cross-world types (messages.ts updated for net-request)
 ├── demo/                     # standalone Vite+React dashboard
 │                             # for manual or automated screenshots
 ├── scripts/
@@ -30,58 +37,68 @@ A live snapshot of where Peekly is, what's saved, what's pending, and how to pic
 └── README, CHANGELOG, LICENSE, SECURITY, PRIVACY, CONTRIBUTING, RELEASING
 ```
 
-## Git state (everything saved)
+## Git state
 
 ```
-HEAD ──── feat: demo app + WIP screenshot automation
-      ├── docs: consolidate v0.2.0 changelog
-      ├── feat(adapters): Twig (Symfony) and Alpine.js              ← Phase 4
-      ├── feat(adapters): Lit / Web Components and Laravel Livewire ← Phase 3
-      ├── feat(adapters): Vue 3 and Preact                          ← Phase 2
-      ├── feat: framework-agnostic adapter architecture             ← Phase 1
-      ├── design: refined icon                       ← TAG v0.2.0 currently here
-      ├── docs: SECURITY / ARCHITECTURE / CHROME_WEB_STORE
-      ├── chore(release): v0.2.0
-      ├── fix(security): tooltip XSS + URL whitelist
-      ├── chore: add release automation
-      ├── feat: panel UX
-      ├── fix: tighter hover targeting
-      ├── feat: contextual tooltip
-      └── feat: initial Peekly release (v0.1.0)                     ← origin/main
+HEAD ──── (uncommitted changes — v0.4.0 work in progress)
+      ├── docs: align README and docs with v0.3.0 sticky-tooltip behavior
+      ├── chore(release): v0.3.0
+      ├── feat(tooltip): keep contextual menu visible after key release
+      ├── docs: add PROJECT_STATE.md — session snapshot of progress
+      ├── feat: demo app for screenshots + WIP Playwright automation
+      ├── docs: consolidate v0.2.0 changelog (multi-framework included)
+      ├── feat(adapters): Twig (Symfony) and Alpine.js
+      ├── feat(adapters): Lit / Web Components and Laravel Livewire
+      ├── feat(adapters): Vue 3 and Preact
+      ├── feat: framework-agnostic adapter architecture
+      └── ...
 ```
 
-**14 commits + 1 tag locally; nothing pushed yet.** The repo at `https://github.com/rosoam/peekly` is still at `dfb2104` (v0.1.0). Everything since lives only in the local main branch.
+**Uncommitted changes (v0.4.0 work):**
+```
+ M src/content/main.ts        # Y toggle for net panel, X-only picker, Esc closes all
+ M src/content/styles.ts      # shared Shadow DOM CSS updates
+ M src/content/tooltip.ts     # DOM tab copy groups + attributes table
+ M src/injected/bridge.ts     # calls initNetworkCapture()
+ M src/shared/messages.ts     # net-request message type
+?? src/content/net-panel.ts   # Network Inspector panel UI
+?? src/content/net-styles.ts  # Network Inspector CSS
+?? src/net/                   # capture.ts, store.ts, types.ts, analysis/
+```
 
-The `v0.2.0` tag has been moved twice through the session and is currently at the icon-design commit (`c1d8164`), one commit before Phase 1. The user's intent is for **v0.2.0 to include everything through Phase 4**. The tag still needs to be moved to HEAD before publishing.
+Nothing has been pushed to `https://github.com/rosoam/peekly` since before v0.2.0. All commits from v0.2.0 onward are local only.
 
-## v0.2.0 — what shipped
+## v0.4.0 — what shipped (uncommitted)
 
-Versioned in `package.json`, `vite.config.ts` manifest, and `CHANGELOG.md`. Once pushed, this becomes the publicly available release.
+In progress. Changes are staged in the working tree (see Git state above). Not yet committed or pushed.
 
-### New since v0.1.0
+### New since v0.3.0
 
-- **Contextual tooltip** (`y` + `x` hover) with 4 tabs: Comp, DOM (rich HTML rendering with click-to-navigate children), CSS (computed + Tailwind variant breakdown), A11y (WCAG checks).
-- **Hover-preview** on panel navigation chips — paints amber overlay around the target component before clicking.
-- **Tighter targeting** — DOM rect for highlight (was full component bounds), shadow DOM piercing, label format `Component · <tag>`.
-- **Selectable + scrollable values** everywhere in the panel (props / computed / Tailwind / source paths).
-- **Multi-framework support** — 8 adapters with invisible detection:
-  React → Preact → Vue 3 → Livewire → Lit → Alpine → Twig → Plain DOM.
-  See `docs/MULTI_FRAMEWORK_AUDIT.md` for the framework analysis.
-- **Refined icon** — partial arc + viewfinder, lime on dark, Raycast vibe.
-- **Security hardening** — replaced `innerHTML` with `createElement+textContent` for any dynamic data; whitelisted editor URL protocols in the service worker.
-- **Release automation** — `bun run release:patch | minor | major` script.
-- **Documentation set** — SECURITY, PRIVACY, ARCHITECTURE, CHROME_WEB_STORE, CONTRIBUTING, RELEASING, MULTI_FRAMEWORK_AUDIT.
+- **Network Inspector** (`y` toggle) — floating draggable panel capturing every `fetch` and `XHR` call. Full details in `CHANGELOG.md` and `docs/ARCHITECTURE.md`.
+- **Tooltip DOM tab improvements** — Copy HTML + Copy classes button group; per-attribute table with individual copy buttons.
+- **Key binding change** — `x` held = component picker + tooltip (replaces `y`/`y+x`); `y` = Network Inspector toggle; `Esc` closes all overlays.
 
-### Bundle sizes (current build)
+### Bundle sizes (current build — v0.4.0 working tree)
 
 | Asset | Size | gzip |
 |---|---|---|
-| `bridge.ts` (MAIN world) | 39.15 kB | 8.89 kB |
-| `main.ts` (ISOLATED world) | 67.17 kB | 15.90 kB |
-| `manifest.json` | 1.44 kB | 0.59 kB |
-| `popup.html` | 3.95 kB | 1.27 kB |
-| Icons (16/32/48/128 PNG) | ~13 kB total | – |
-| **Total zipped extension** | ~115 kB | – |
+| `main.ts` (ISOLATED world, includes net-panel) | 134.90 kB | 33.11 kB |
+| Other assets | unchanged from v0.3.0 | – |
+
+The jump from ~67 kB to ~135 kB in `main.ts` reflects the net-panel, net-styles, and analysis modules now bundled into the isolated-world entry point.
+
+## v0.3.0 — what shipped
+
+- **Sticky tooltip after key release** — releasing `y` (now `x`) pins the tooltip; only click-outside or `Esc` dismisses it.
+- **Key bindings swapped to letter keys** — `y` + `x` (then simplified to `x`-only in v0.4.0).
+
+## v0.2.0 — what shipped
+
+- **Contextual tooltip** with 4 tabs: Comp, DOM (rich HTML + click-to-navigate children), CSS (computed + Tailwind variant breakdown), A11y (WCAG checks).
+- **Hover-preview** on panel navigation chips — amber overlay around the target component before clicking.
+- **Tighter targeting** — DOM rect for highlight (was full component bounds), shadow DOM piercing.
+- **Multi-framework support** — 8 adapters: React → Preact → Vue 3 → Livewire → Lit → Alpine → Twig → Plain DOM.
+- **Refined icon**, **security hardening**, **release automation**, **documentation set**.
 
 ## Multi-framework — what each adapter surfaces
 
@@ -107,8 +124,14 @@ Versioned in `package.json`, `vite.config.ts` manifest, and `CHANGELOG.md`. Once
 5. **Inspect history breadcrumb** in the panel (last 5 inspections).
 6. **Re-render counter for non-React adapters** (Vue's reactivity, Preact's hooks). Currently React-only.
 7. **Outline mode reactivation** — was retired in v0.2.0 from the previous `Option+Shift` combo, needs to reappear as a popup toggle.
+8. **Network Inspector HAR export** — export captured requests as a HAR 1.2 file for sharing or offline analysis.
+9. **Persist Network Inspector entries across navigation** — currently in-memory only; cleared on page reload.
 
 ## Known issues / blockers
+
+### v0.4.0 uncommitted
+
+All Network Inspector work is in the working tree but not yet committed. Commit it before doing anything else.
 
 ### Screenshot automation script
 
@@ -129,36 +152,31 @@ bun run demo:dev          # serves http://localhost:5173
 # In Chrome, manually:
 #   1. chrome://extensions/ → Load unpacked → select peekly/dist
 #   2. Navigate to localhost:5173
-#   3. Hold y (+ optionally x), interact, capture with
-#      Cmd+Shift+4 selecting a 1280×800 region.
+#   3. Hold x (for component inspector), or press y (for Network Inspector),
+#      interact, capture with Cmd+Shift+4 selecting a 1280×800 region.
 ```
 
 Five screenshots needed for the Chrome Web Store listing, all 1280×800 PNG (specifications + suggested subjects in `docs/CHROME_WEB_STORE.md`).
 
 ### Push to GitHub
 
-`git push origin main && git push origin v0.2.0` is gated by a `push-guard` hook that requires manual user invocation. Nothing has been pushed since v0.1.0.
-
-### v0.2.0 tag location
-
-The tag is currently at `c1d8164` (icon refinement) but the intended `v0.2.0` content includes everything through Phase 4. **Before publishing**, run:
-
-```bash
-git tag -d v0.2.0
-git tag v0.2.0      # at current HEAD
-git push origin main
-git push origin v0.2.0
-```
+Nothing has been pushed to `https://github.com/rosoam/peekly` since before v0.2.0. Push is gated by a `push-guard` hook that requires manual invocation.
 
 ## How to pick this up later
 
 ```bash
 cd /Users/rso/Projects/peekly
 
-# Sanity check — should print Phase 4 commit messages.
+# 1. Commit the v0.4.0 working tree changes.
+git add src/content/net-panel.ts src/content/net-styles.ts src/net/ \
+        src/content/main.ts src/content/styles.ts src/content/tooltip.ts \
+        src/injected/bridge.ts src/shared/messages.ts
+git commit -m "feat(network-inspector): v0.4.0 — Network Inspector + X-only picker"
+
+# 2. Sanity check.
 git log --oneline | head -6
 
-# Build & run the demo.
+# 3. Build & run the demo.
 bun install                  # in case of fresh clone
 bun run gen:icons
 bun run build
@@ -168,6 +186,7 @@ bun run demo:dev             # http://localhost:5173
 # In Chrome:
 #   chrome://extensions/ → Load unpacked → peekly/dist
 #   Open localhost:5173
+#   Hold x to inspect, press y for the Network Inspector.
 ```
 
 ## Useful commands

@@ -7,39 +7,44 @@ This document is for contributors and curious readers. Users only need [README.m
 ## High-level diagram
 
 ```
-                          ┌──────────────────────────────────────────┐
-                          │           Browser Tab                    │
-                          │                                          │
-                          │  ┌──────────────────────────────────┐    │
-                          │  │         MAIN world (page JS)     │    │
-                          │  │                                  │    │
-                          │  │   React app                      │    │
-                          │  │   __REACT_DEVTOOLS_GLOBAL_HOOK__ │    │
-   ┌──────────────────┐   │  │   ┌──────────────────────┐       │    │
-   │ Service worker   │   │  │   │  bridge.ts           │       │    │
-   │ service-worker.ts│◄──┼──┼───┤  • fiber walking     │       │    │
-   │                  │   │  │   │  • commit hook       │       │    │
-   │ • open-editor    │   │  │   │  • fiber registry    │       │    │
-   │ • settings init  │   │  │   └──────────┬───────────┘       │    │
-   └──────────────────┘   │  │              │ window.postMessage│    │
-            ▲             │  │              ▼                   │    │
-            │             │  │   ┌──────────────────────┐       │    │
-            │ chrome.runtime  │  │  ISOLATED world      │       │    │
-            │ .sendMessage    │  │                      │       │    │
-            └─────────────────┼──┤  main.ts             │       │    │
-                          │  │  │  • events / mouse    │       │    │
-                          │  │  │  • Shadow DOM overlay│       │    │
-                          │  │  │  • panel.ts          │       │    │
-                          │  │  │  • tooltip.ts        │       │    │
-                          │  │  └──────────┬───────────┘       │    │
-                          │  │             │                   │    │
-                          │  │             ▼                   │    │
-                          │  │      [Shadow DOM]               │    │
-                          │  │      • highlight overlay        │    │
-                          │  │      • tooltip                  │    │
-                          │  │      • full panel               │    │
-                          │  └─────────────────────────────────┘    │
-                          └──────────────────────────────────────────┘
+                          ┌──────────────────────────────────────────────┐
+                          │              Browser Tab                     │
+                          │                                              │
+                          │  ┌──────────────────────────────────────┐    │
+                          │  │         MAIN world (page JS)         │    │
+                          │  │                                      │    │
+                          │  │   React app                          │    │
+                          │  │   __REACT_DEVTOOLS_GLOBAL_HOOK__     │    │
+   ┌──────────────────┐   │  │   ┌──────────────────────┐           │    │
+   │ Service worker   │   │  │   │  bridge.ts           │           │    │
+   │ service-worker.ts│◄──┼──┼───┤  • fiber walking     │           │    │
+   │                  │   │  │   │  • commit hook       │           │    │
+   │ • open-editor    │   │  │   │  • fiber registry    │           │    │
+   │ • settings init  │   │  │   │  • initNetworkCapture│           │    │
+   └──────────────────┘   │  │   └──────────┬───────────┘           │    │
+            ▲             │  │              │ window.postMessage     │    │
+            │             │  │       (inspect / hover / net-request) │    │
+            │ chrome.runtime  │              ▼                       │    │
+            │ .sendMessage    │   ┌──────────────────────────┐       │    │
+            └─────────────────┼──┤  ISOLATED world           │       │    │
+                          │  │  │                            │       │    │
+                          │  │  │  main.ts                   │       │    │
+                          │  │  │  • events / mouse          │       │    │
+                          │  │  │  • Shadow DOM overlay      │       │    │
+                          │  │  │  • panel.ts (component)    │       │    │
+                          │  │  │  • tooltip.ts              │       │    │
+                          │  │  │  • net-panel.ts (network)  │       │    │
+                          │  │  │  • net/store.ts            │       │    │
+                          │  │  └──────────┬─────────────────┘       │    │
+                          │  │             │                         │    │
+                          │  │             ▼                         │    │
+                          │  │      [Shadow DOM]                     │    │
+                          │  │      • highlight overlay              │    │
+                          │  │      • tooltip                        │    │
+                          │  │      • component panel                │    │
+                          │  │      • Network Inspector panel        │    │
+                          │  └───────────────────────────────────────┘    │
+                          └──────────────────────────────────────────────┘
 ```
 
 ## The two-world model
@@ -146,7 +151,7 @@ while (el && el.shadowRoot && depth < 16) {
 
 Closed shadow roots are not penetrable from outside — that's a fundamental browser invariant we honor.
 
-## Tooltip lifecycle (`y` + `x`)
+## Tooltip lifecycle (`x` held)
 
 The tooltip is a small floating debugger that appears next to the cursor. Its state machine:
 
@@ -154,7 +159,7 @@ The tooltip is a small floating debugger that appears next to the cursor. Its st
               ┌──────────┐
               │  hidden  │ ◄────────────┐
               └────┬─────┘              │
-                   │ y + x held         │ click outside  /  Esc
+                   │ x held             │ click outside  /  Esc
                    │ + mousemove        │
                    ▼                    │
               ┌──────────┐              │
@@ -167,27 +172,27 @@ The tooltip is a small floating debugger that appears next to the cursor. Its st
               │  frozen  │ ────────────►│
               │(in-tooltip)             │
               └────┬─────┘              │
-                   │ y or x released    │
+                   │ x released         │
                    ▼                    │
               ┌──────────┐              │
               │  pinned  │ ─────────────┘
               │(sticky,  │
               │ interactive)            │
               └────┬─────┘              │
-                   │ y + x re-pressed   │
+                   │ x re-pressed       │
                    │ on a new element   │
                    └──────► tracking
 ```
 
-Once the tooltip is visible (in `tracking` or `frozen`), releasing **either** key transitions to `pinned` — the tooltip stays on screen. The user dismisses it explicitly (click outside or `Esc`). Re-pressing `y + x` while moving over a different element resumes live tracking for a fresh inspection.
+Once the tooltip is visible (in `tracking` or `frozen`), releasing `x` transitions to `pinned` — the tooltip stays on screen. The user dismisses it explicitly (click outside or `Esc`). Re-pressing `x` while moving over a different element resumes live tracking for a fresh inspection.
 
-`y` and `x` are letter keys, not OS modifiers — `src/content/main.ts` tracks press/release manually via `keydown` / `keyup`. Handlers ignore the keys when the focus target is editable (`input`, `textarea`, `select`, `contenteditable`) and when any real modifier is held (`Cmd` / `Ctrl` / `Alt`), so they never steal text input or fight native shortcuts. `window.blur` clears both flags so a tab switch can't leave the picker stuck on.
+`x` is a letter key, not an OS modifier — `src/content/main.ts` tracks press/release manually via `keydown` / `keyup`. The handler ignores `x` when the focus target is editable (`input`, `textarea`, `select`, `contenteditable`) and when any real modifier is held (`Cmd` / `Ctrl` / `Alt`), so it never steals text input or fights native shortcuts. `window.blur` clears the flag so a tab switch can't leave the picker stuck on.
 
 The tooltip never repositions while the cursor is inside it (the `mousemove` early-returns via `isInsideHost`). This makes the tabs clickable without the tooltip running away from the cursor.
 
 Position is set via `transform: translate3d(...)` for hardware-accelerated movement, with a flip if near the right or bottom viewport edges.
 
-## Full panel (`y` + click)
+## Full panel (`x` + click)
 
 The panel is more elaborate:
 
@@ -214,6 +219,57 @@ The bridge maintains a `Map<string, WeakRef<Fiber>>` for fibers exposed by id (p
 ```
 
 `onInstalled` backfills missing keys with `DEFAULT_SETTINGS` so adding new fields in future versions doesn't break existing installs. `onChanged` listeners in the content script and popup keep the two surfaces in sync.
+
+## Network Inspector
+
+### MAIN-world capture
+
+`src/net/capture.ts` is called from `bridge.ts` via `initNetworkCapture()` at document load. Because it must intercept the page's own `fetch` and `XMLHttpRequest`, it runs in the **MAIN world** — the same JS context as the page itself.
+
+The capture patches both globals before any app code runs:
+
+- `window.fetch` is replaced with a wrapper that clones the request, awaits the response, reads the body as text (teed so the original consumer is unaffected), and assembles a `RequestEntry`.
+- `window.XMLHttpRequest` is subclassed so that `open`, `send`, and `readystatechange` cooperate to record the same fields.
+
+Each completed request is posted to the isolated world via `window.postMessage` as a `net-request` message with the full `RequestEntry` payload.
+
+### Isolated-world store
+
+`src/net/store.ts` receives `net-request` messages and holds the captured entries in memory. `main.ts` subscribes to the store and notifies the Network Inspector panel (if open) of incoming entries so the list updates in real time.
+
+### Net panel UI
+
+`src/content/net-panel.ts` renders the Network Inspector inside the shared Shadow DOM. It is triggered by pressing `y` (keydown in `main.ts` calls `toggleNetPanel()`). The panel is draggable by its header and can be closed with the close button, via the same `y` keypress, or with `Esc`.
+
+The panel has three main areas:
+
+1. **Filter bar** — text search, method dropdown, status dropdown (2xx / 4xx / 5xx), slow-only toggle.
+2. **Request list** — each row shows a method badge, the request path, a smart human-readable label (from `analysis/smart-labels.ts`), HTTP status, and duration. Slow rows (above the slow threshold) are highlighted in orange. The selected row has a blue left border and stronger background.
+3. **Detail pane** (shown when a row is selected) — tabbed view:
+   - **Overview**: URL, status, duration, component attribution.
+   - **Request**: request headers and body, with Copy headers / Copy body / Copy all buttons.
+   - **Response**: response headers and body, with copy buttons.
+   - **TypeScript**: generated TypeScript interface from the response JSON body (`analysis/typescript-gen.ts`).
+   - **GraphQL**: shown only when `analysis/graphql.ts` detects a GraphQL operation — displays operation type, name, variables, and any `errors[]` in the response.
+
+The footer displays badge counts (errors, slow, N+1, drift, anomaly). Clicking the N+1 badge opens a detail overlay with a stacked bar chart of the repeated endpoint calls. Clicking the chart icon opens the request chart overlay with Timeline and Waterfall views.
+
+### Analysis pipeline
+
+All analysis modules live in `src/net/analysis/` and are pure functions over `RequestEntry` arrays or individual entries:
+
+| Module | What it does |
+|---|---|
+| `smart-labels.ts` | Strips numeric IDs and common prefixes from paths to produce a short human label (e.g. "GET users"). |
+| `graphql.ts` | Detects POST requests whose body has a `query` string field; extracts `operationType`, `operationName`, and `variables`; surfaces `response.errors[]`. |
+| `jwt.ts` | Scans `Authorization` and `Cookie` headers for JWT tokens and parses their claims for display in the Overview tab. |
+| `typescript-gen.ts` | Walks a parsed JSON value recursively and emits a TypeScript interface definition. |
+| `drift.ts` | Groups calls by endpoint and compares the shape of successive JSON responses; emits a drift indicator when the response schema changes. |
+| `anomaly.ts` | Computes mean and standard deviation of response times per endpoint; flags individual requests that deviate beyond a configurable threshold. |
+
+### Related Requests
+
+When the component inspector panel is open (opened via `x` + click), `net-panel.ts` renders a "Related Requests" section that filters the captured request list to entries where `r.component` matches the name of the currently inspected component. Component attribution is set by `capture.ts` from a stack trace captured at the call site.
 
 ## Build pipeline
 

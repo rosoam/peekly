@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Manifest V3](https://img.shields.io/badge/manifest-v3-success.svg)](https://developer.chrome.com/docs/extensions/develop/migrate/what-is-mv3)
 
-**Hold `y`, hover any element, click to inspect. Add `x` for the contextual tooltip.**
+**Hold `x` to inspect any component. Press `y` for the Network Inspector.**
 
 No need to open DevTools. No need to switch tabs. Peekly lives quietly in the background and only shows up when you ask for it.
 
@@ -14,9 +14,8 @@ No need to open DevTools. No need to switch tabs. Peekly lives quietly in the ba
 
 ## What it does
 
-- **Hover with `y`** → an indigo border highlights the **React component** under the cursor (real bounding box, not just the DOM element under the pointer).
-- **Hover with `y + x`** → adds a **floating contextual tooltip** near the cursor with tabs (`Comp` / `DOM` / `CSS` / `A11y`). The tooltip is **sticky**: once it appears, releasing the keys leaves it on screen so you can interact with it. Click outside or press `Esc` to dismiss it. Re-pressing `y + x` resumes live cursor tracking for a fresh inspection.
-- **`y` + click** → a floating panel opens with everything you need:
+- **Hold `x`, hover any element** → an indigo border highlights the **React component** under the cursor; a floating contextual tooltip appears next to the cursor with tabs (`Comp` / `DOM` / `CSS` / `A11y`). The tooltip is **sticky**: releasing `x` leaves it on screen so you can interact with it. Click outside or press `Esc` to dismiss it. Re-pressing `x` resumes live cursor tracking for a fresh inspection.
+- **`x` + click** → a floating panel opens with everything you need:
   - **Source file** with one-click open in **VS Code / Cursor / WebStorm / Sublime**
   - **Parent and children navigation** (chips you can click to re-inspect — no need to move the mouse)
   - **Live re-render counter** (powered by the React DevTools commit hook, installed automatically)
@@ -28,8 +27,22 @@ No need to open DevTools. No need to switch tabs. Peekly lives quietly in the ba
   - **Owner chain** — clickable links to every ancestor's source file
 - **Highlight all instances** (icon in the panel header) → paint every render of the same component on the page
 - **Drag the panel** by its header to reposition it
+- **Press `y`** → toggle the **Network Inspector** panel: a floating draggable panel that captures every `fetch` and `XHR` request on the page in real time, with filtering, request detail tabs, TypeScript interface generation, GraphQL analysis, and performance overlays.
 
-Plain letter keys (`y` / `x`) are intentional — they're easy to reach with one hand and don't collide with the OS / browser shortcuts that real modifiers (`Option`, `Shift`, `Ctrl`) tend to clash with. They're only active when you're not typing in a form field.
+Plain letter keys (`x` / `y`) are intentional — they're easy to reach with one hand and don't collide with the OS / browser shortcuts that real modifiers (`Option`, `Shift`, `Ctrl`) tend to clash with. They're only active when you're not typing in a form field.
+
+## Network Inspector
+
+Press `y` on any page to open the Network Inspector — a floating draggable panel that captures every `fetch` and `XMLHttpRequest` call made by the page.
+
+- **Request list** — method badge, path, smart human-readable label, status, duration. Slow requests are highlighted in orange.
+- **Filter bar** — text search, method filter (GET / POST / PUT / DELETE / PATCH), status filter (2xx / 4xx / 5xx), slow-only toggle.
+- **Request detail tabs**: Overview, Request (headers + body), Response (headers + body), TypeScript interface (generated from the JSON response body), GraphQL (operation type, name, variables, and errors — shown only when applicable).
+- **Copy buttons** in every tab: Copy headers, Copy body, Copy all.
+- **Footer badges**: error count, slow count, N+1 warning, drift indicator, anomaly indicator.
+- **N+1 badge** → click for a detail overlay with a stacked bar chart of the repeated calls.
+- **Request chart overlay** — stats bar (total / avg / p95 / errors / slow) with Timeline (scatter plot with p95 + 500 ms reference lines) and Waterfall (rows with method badge, path, and duration bar) views.
+- **Related requests** — when the component inspector is open, a "Related Requests" section shows network calls attributed to that component (via stack-trace analysis).
 
 ## Why not React DevTools?
 
@@ -38,7 +51,7 @@ React DevTools is great. Peekly is **complementary**, not a replacement:
 | | React DevTools | Peekly |
 |---|---|---|
 | Panel location | DevTools sidebar | Floating, on-page, draggable |
-| Element selection | Open DevTools → click "Select" → click | Hold `y`, click |
+| Element selection | Open DevTools → click "Select" → click | Hold `x`, click |
 | Source jump | Right-click → "Show source" | One-click "Open in editor" button |
 | Computed styles | Separate Elements panel | Inline in the same panel |
 | Tailwind decode | None | Grouped by variant |
@@ -81,23 +94,23 @@ _Coming soon._
    - **Auto-on localhost** — automatically active on `localhost`, `127.0.0.1`, `*.localhost` (**on by default**)
    - **Editor** — VS Code / Cursor / WebStorm / Sublime / None (drives the "Open in" button)
 3. On any supported page (React, Preact, Vue 3, Lit, Livewire, Alpine.js, Twig, or plain DOM):
-   - Hold `y` and move the cursor → indigo highlight + component name
-   - Hold `y + x` → contextual tooltip appears next to the cursor; it stays after you release the keys
-   - `y` + click → full inspector panel opens
+   - Hold `x` and move the cursor → indigo highlight + contextual tooltip with component details
+   - `x` + click → full inspector panel opens
+   - Press `y` → toggle the Network Inspector panel
    - Click outside the tooltip / panel, or press `Esc`, to dismiss
 
 ## How it works
 
 Two content scripts are injected on every page and iframe:
 
-- An **isolated-world** script (`src/content/main.ts`) handles keyboard / mouse events, the highlight overlay, the panel, drag, and storage.
-- A **main-world** script (`src/injected/bridge.ts`) accesses the page's React internals. It walks the fiber tree to extract names, props, source locations, parent / children components, and bounding rectangles.
+- An **isolated-world** script (`src/content/main.ts`) handles keyboard / mouse events, the highlight overlay, the component panel, the Network Inspector panel, drag, and storage.
+- A **main-world** script (`src/injected/bridge.ts`) accesses the page's React internals. It walks the fiber tree to extract names, props, source locations, parent / children components, and bounding rectangles. It also calls `initNetworkCapture()` (from `src/net/capture.ts`) to patch `window.fetch` and `XMLHttpRequest` in the MAIN world, capturing every request as it is made.
 
-The two scripts communicate via `window.postMessage` with a namespaced protocol.
+The two scripts communicate via `window.postMessage` with a namespaced protocol. Network request entries travel the same channel from MAIN world to the isolated-world store before being displayed in the Network Inspector panel.
 
 To enable the live re-render counter, the bridge installs a minimal `__REACT_DEVTOOLS_GLOBAL_HOOK__` stub at `document_start` if React DevTools isn't already present. Each `onCommitFiberRoot` increments the counters of subscribed fibers and pushes a tick to the panel.
 
-A Shadow DOM (`closed` mode) is used for the overlay and panel so Peekly never collides with the host site's CSS.
+A Shadow DOM (`closed` mode) is used for the overlay, component panel, and Network Inspector panel so Peekly never collides with the host site's CSS.
 
 ## Project structure
 
@@ -106,10 +119,23 @@ src/
   background/service-worker.ts   # init storage + open-editor handler
   content/
     main.ts                      # ISOLATED world: events, overlay, panel orchestration
-    panel.ts                     # panel rendering (sections, drag, sub-handlers)
-    styles.ts                    # Shadow DOM CSS
+    panel.ts                     # component panel rendering (sections, drag, sub-handlers)
+    net-panel.ts                 # Network Inspector panel UI
+    net-styles.ts                # Network Inspector CSS (Shadow DOM)
+    styles.ts                    # Shadow DOM CSS (component overlay)
   injected/
-    bridge.ts                    # MAIN world: fiber walk, registry, commit hook
+    bridge.ts                    # MAIN world: fiber walk, registry, commit hook, network capture init
+  net/
+    capture.ts                   # patches fetch + XHR in MAIN world; emits RequestEntry messages
+    store.ts                     # isolated-world store for captured requests
+    types.ts                     # RequestEntry and related types
+    analysis/
+      smart-labels.ts            # humanizes request paths
+      graphql.ts                 # GraphQL detection and parsing
+      jwt.ts                     # JWT / cookie extraction from headers
+      typescript-gen.ts          # TypeScript interface generator from JSON response
+      drift.ts                   # schema drift detection across repeated calls
+      anomaly.ts                 # statistical anomaly flagging for response times
   popup/
     popup.html / popup.ts        # extension popup (3 toggles)
   shared/
