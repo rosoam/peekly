@@ -140,6 +140,14 @@ function buildDebugBundle(r: RequestEntry): string {
     `RESPONSE BODY`,
     `·············`,
     fmtBody(r.responseBody),
+    ...(r.callStack && r.callStack.length > 0
+      ? [
+          ``,
+          `CALL STACK`,
+          `··········`,
+          ...r.callStack.map((f, i) => `  ${String(i).padStart(2, ' ')}  ${f}`),
+        ]
+      : []),
     ``,
     sep,
   ].join('\n');
@@ -823,15 +831,6 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
     // Insights
     const insights: HTMLElement[] = [];
 
-    const label = smartLabel(r.method, r.path);
-    if (label) {
-      const card = makeEl('div', 'np-intel-card', '');
-      card.appendChild(makeEl('div', 'np-intel-card-title', 'Smart label'));
-      card.appendChild(makeEl('div', '', label));
-      addCopyBtn(card, () => `Smart label: ${label}`);
-      insights.push(card);
-    }
-
     if (r.duration > 1000) {
       const card = makeEl('div', 'np-intel-card', '');
       card.appendChild(makeEl('div', 'np-intel-card-title', 'Slow request'));
@@ -868,7 +867,14 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
 
     // Call stack
     if (r.callStack && r.callStack.length > 0) {
-      pOverview.appendChild(makeEl('div', 'np-kv-label', 'Call stack'));
+      const csHeader = makeEl('div', 'np-cs-header');
+      csHeader.appendChild(makeEl('span', 'np-kv-label', 'Call stack'));
+      const csAllCopy = makeEl('button', 'np-cs-copy-all', 'Copy all');
+      (csAllCopy as HTMLButtonElement).type = 'button';
+      csAllCopy.addEventListener('click', () => onCopy(r.callStack!.join('\n')));
+      csHeader.appendChild(csAllCopy);
+      pOverview.appendChild(csHeader);
+
       const stackWrap = makeEl('div', 'np-callstack');
       r.callStack.forEach((frame, i) => {
         const row = makeEl('div', 'np-cs-row');
@@ -877,16 +883,10 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
         text.title = frame;
         const copyBtn = makeEl('button', 'np-cs-copy', 'Copy');
         (copyBtn as HTMLButtonElement).type = 'button';
-        copyBtn.addEventListener('click', () => {
-          void navigator.clipboard.writeText(frame).then(
-            () => onCopy(frame),
-            () => {},
-          );
-        });
+        copyBtn.addEventListener('click', () => onCopy(frame));
         row.append(idx, text, copyBtn);
         stackWrap.appendChild(row);
       });
-      addCopyBtn(stackWrap, () => r.callStack!.join('\n'));
       pOverview.appendChild(stackWrap);
     }
   }

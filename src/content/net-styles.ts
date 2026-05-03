@@ -574,6 +574,35 @@ export const netPanelCss = `
 .np-intel-content::-webkit-scrollbar { width: 8px; }
 .np-intel-content::-webkit-scrollbar-thumb { background: var(--np-bg-control); border-radius: 4px; }
 /* ─── Call stack ─────────────────────────────────────────────────── */
+.np-cs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  margin-bottom: 2px;
+}
+.np-cs-header .np-kv-label { margin-top: 0; }
+
+.np-cs-copy-all {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.09);
+  color: rgba(255,255,255,0.5);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  transition: background 100ms, color 100ms, border-color 100ms;
+}
+.np-cs-copy-all:hover {
+  background: rgba(99,102,241,0.18);
+  color: #c7d2fe;
+  border-color: rgba(99,102,241,0.4);
+}
+
 .np-callstack {
   background: var(--np-bg-elevated);
   border: 1px solid var(--np-sep-2);
