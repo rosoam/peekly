@@ -1677,8 +1677,9 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
   // Attach to shadow DOM.
   shadow.appendChild(panel);
 
-  // Initial render.
+  // Initial render — scroll to bottom so last request is visible.
   refreshList();
+  requestAnimationFrame(() => { reqList.scrollTop = reqList.scrollHeight; });
 
   return {
     element: panel,
