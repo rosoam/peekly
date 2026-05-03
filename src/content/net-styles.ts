@@ -126,6 +126,27 @@ export const netPanelCss = `
   color: var(--np-label);
   border-color: var(--np-sep);
 }
+.np-btn-label { pointer-events: none; }
+.np-btn-count {
+  display: inline-block;
+  min-width: 14px;
+  margin-left: 4px;
+  padding: 0 3px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(235,235,245,0.5);
+  line-height: 14px;
+  vertical-align: middle;
+  text-align: center;
+  pointer-events: none;
+}
+.np-mf.active .np-btn-count, .np-sf.active .np-btn-count {
+  background: rgba(255,255,255,0.12);
+  color: rgba(235,235,245,0.75);
+}
+.np-btn-count:empty { display: none; }
 .np-ctrlbar .np-sep {
   width: 1px;
   height: 18px;
@@ -134,9 +155,10 @@ export const netPanelCss = `
   flex-shrink: 0;
 }
 .np-search-wrap {
-  flex: 1;
-  min-width: 120px;
-  margin: 0 6px;
+  flex: 0 0 auto;
+  width: 150px;
+  margin-left: auto;
+  margin-right: 4px;
   display: flex;
 }
 .np-search-input {

@@ -288,10 +288,16 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
 
   const methodFilters = ['ALL', 'GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
   const methodBtns: HTMLButtonElement[] = [];
+  const methodCountSpans = new Map<string, HTMLSpanElement>();
   for (const m of methodFilters) {
-    const b = makeEl('button', `np-mf${m === 'ALL' ? ' active' : ''}`, m);
+    const b = makeEl('button', `np-mf${m === 'ALL' ? ' active' : ''}`) as HTMLButtonElement;
     b.type = 'button';
     b.dataset['method'] = m;
+    b.appendChild(makeEl('span', 'np-btn-label', m));
+    const cs = document.createElement('span');
+    cs.className = 'np-btn-count';
+    b.appendChild(cs);
+    methodCountSpans.set(m, cs);
     b.addEventListener('click', () => {
       filterMethod = m;
       methodBtns.forEach((x) => x.classList.toggle('active', x.dataset['method'] === m));
@@ -311,10 +317,16 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
     { key: '5xx', label: '5xx' },
   ];
   const statusBtns: HTMLButtonElement[] = [];
+  const statusCountSpans = new Map<string, HTMLSpanElement>();
   for (const s of statusFilters) {
-    const b = makeEl('button', `np-sf${s.key === 'ALL' ? ' active' : ''}`, s.label);
+    const b = makeEl('button', `np-sf${s.key === 'ALL' ? ' active' : ''}`) as HTMLButtonElement;
     b.type = 'button';
     b.dataset['status'] = s.key;
+    b.appendChild(makeEl('span', 'np-btn-label', s.label));
+    const cs = document.createElement('span');
+    cs.className = 'np-btn-count';
+    b.appendChild(cs);
+    statusCountSpans.set(s.key, cs);
     b.addEventListener('click', () => {
       filterStatus = s.key;
       statusBtns.forEach((x) => x.classList.toggle('active', x.dataset['status'] === s.key));
@@ -702,6 +714,27 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
     return `${filterMethod}|${filterStatus}|${filterSearch}|${filterSlow}`;
   }
 
+  function updateFilterCounts(): void {
+    const reqs = getState().requests;
+    const mc: Record<string, number> = { ALL: reqs.length };
+    const sc: Record<string, number> = { ALL: reqs.length, '2xx': 0, '3xx': 0, '4xx': 0, '5xx': 0 };
+    for (const r of reqs) {
+      mc[r.method] = (mc[r.method] ?? 0) + 1;
+      if (r.status >= 200 && r.status < 300) sc['2xx']++;
+      else if (r.status >= 300 && r.status < 400) sc['3xx']++;
+      else if (r.status >= 400 && r.status < 500) sc['4xx']++;
+      else if (r.status >= 500) sc['5xx']++;
+    }
+    for (const [m, span] of methodCountSpans) {
+      const n = mc[m] ?? 0;
+      span.textContent = n > 0 ? String(n) : '';
+    }
+    for (const [s, span] of statusCountSpans) {
+      const n = sc[s] ?? 0;
+      span.textContent = n > 0 ? String(n) : '';
+    }
+  }
+
   function refreshList(): void {
     const filtered = getFiltered();
     const currentKey = getFilterKey();
@@ -748,6 +781,7 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
       }
     }
 
+    updateFilterCounts();
     updateStatusBar();
     if (selectedId) {
       const r = getSelectedRequest();
