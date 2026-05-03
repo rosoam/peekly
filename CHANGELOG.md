@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Call stack in network requests** — each captured request now carries the JS call stack that triggered it (up to 12 user-land frames, webpack/node_modules internals filtered out). Displayed in the Overview tab as a scrollable frame list with per-frame copy buttons and a "Copy all" button on the section header. The call stack is also included in the per-request debug bundle (Copy all in the Request tab).
+
+- **N+1 dialog: stats, severity, and Copy all** — the N+1 Patterns overlay now shows for each pattern: a stats row with avg duration, total time wasted, and first/last seen timestamps; a computed burst window in the count pill (replaces the hardcoded "in 3s"); three severity tiers (moderate / high / critical) with distinct colours and matching hint text; and a **Copy all** button in the overlay header that exports a structured N+1 debug bundle (all patterns, full request list per pattern, timing stats).
+
+### Changed
+
+- **Scroll isolation** — the cursor tooltip body and the Network Inspector panel (request list + tab panels) no longer scroll the host page when the cursor is inside them (`overscroll-behavior: contain` + `wheel stopPropagation`).
+- **Selected request row** — the focused request in the Network Inspector list now has a stronger indigo left border and background, making it easy to identify while inspecting its detail tabs.
+
+### Removed
+
+- **Smart labels in Overview tab** — the auto-generated human-readable label card has been removed from the Overview tab to reduce visual noise. Labels remain visible in the request list column.
+
 ## [0.4.0] - 2026-05-03
 
 ### Added

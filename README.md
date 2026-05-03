@@ -39,8 +39,9 @@ Press `y` on any page to open the Network Inspector — a floating draggable pan
 - **Filter bar** — text search, method filter (GET / POST / PUT / DELETE / PATCH), status filter (2xx / 4xx / 5xx), slow-only toggle.
 - **Request detail tabs**: Overview, Request (headers + body), Response (headers + body), TypeScript interface (generated from the JSON response body), GraphQL (operation type, name, variables, and errors — shown only when applicable).
 - **Copy buttons** in every tab: Copy headers, Copy body, Copy all.
+- **Call stack** — each request shows the JS call frames that triggered it (up to 12, filtered to user-land code). Visible in the Overview tab with per-frame copy buttons.
 - **Footer badges**: error count, slow count, N+1 warning, drift indicator, anomaly indicator.
-- **N+1 badge** → click for a detail overlay with a stacked bar chart of the repeated calls.
+- **N+1 badge** → click for a detail overlay showing every repeated-call pattern with computed burst window, avg/total duration stats, first/last seen timestamps, severity tiers (moderate / high / critical), and a **Copy all** button that exports a full N+1 debug bundle.
 - **Request chart overlay** — stats bar (total / avg / p95 / errors / slow) with Timeline (scatter plot with p95 + 500 ms reference lines) and Waterfall (rows with method badge, path, and duration bar) views.
 - **Related requests** — when the component inspector is open, a "Related Requests" section shows network calls attributed to that component (via stack-trace analysis).
 

@@ -37,11 +37,11 @@ The store listing has stricter requirements than the manifest. Prepare these bef
 
 Suggested set for Peekly:
 
-1. **Hero**: a React app (e.g. localhost dev) with the indigo highlight + label `<HeaderSection · <span>>` clearly visible
-2. **Big panel open**: shows source card, props, navigation chips, owner chain
-3. **Tooltip with all four tabs visible** (cycle through and pick the most informative)
-4. **Class breakdown / computed styles** sections expanded
-5. **Settings popup** showing the three toggles
+1. **Hero — component inspector**: a React app with the indigo highlight + label `<HeaderSection · <span>>` visible and the full inspector panel open (source card, props, owner chain)
+2. **Tooltip tabs**: the contextual tooltip with the DOM or CSS tab active — shows attributes table, class breakdown, or A11y warnings
+3. **Network Inspector — request list**: the Network Inspector panel open with a populated request list (method badges, paths, status, duration, slow rows in orange)
+4. **Network Inspector — detail view**: a request selected, showing the Overview tab with call stack, or the TypeScript interface tab
+5. **Network Inspector — N+1 overlay**: the N+1 Patterns dialog showing a repeated-call pattern with stats row and severity colour
 
 ### Promotional tile (optional, recommended)
 
