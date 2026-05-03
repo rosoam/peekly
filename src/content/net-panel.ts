@@ -253,6 +253,8 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
   let intelMode = false;
   let intelTab: IntelTab = 'drift';
   let detailTab: DetailTab = 'overview';
+  let renderedIds = new Set<string>();
+  let lastFilterKey = '';
 
   const seenRequestIds = new Set<string>();
 
@@ -673,51 +675,79 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
     });
   }
 
+  function buildRow(r: RequestEntry): HTMLDivElement {
+    const row = makeEl('div', 'np-req-row');
+    if (r.id === selectedId) row.classList.add('selected');
+    if (r.status >= 400 && r.status < 500) row.classList.add('is-4xx');
+    if (r.status >= 500) row.classList.add('is-5xx');
+    if (r.duration > 500) row.classList.add('is-slow');
+    row.dataset['id'] = r.id;
+
+    row.appendChild(makeEl('span', `np-method-badge ${methodClass(r.method)}`, r.method));
+
+    const pathwrap = makeEl('div', 'np-rr-pathwrap');
+    pathwrap.appendChild(makeEl('div', 'np-rr-path', r.path + (r.query ? `?${r.query}` : '')));
+    const label = smartLabel(r.method, r.path);
+    if (label) pathwrap.appendChild(makeEl('span', 'np-rr-smart-label', label));
+    row.appendChild(pathwrap);
+
+    row.appendChild(makeEl('span', `np-rr-status ${statusClass(r.status)}`, r.status ? String(r.status) : '—'));
+    row.appendChild(makeEl('span', 'np-rr-dur', formatDuration(r.duration)));
+    row.addEventListener('click', () => selectRequest(r.id));
+    return row;
+  }
+
+  function getFilterKey(): string {
+    return `${filterMethod}|${filterStatus}|${filterSearch}|${filterSlow}`;
+  }
+
   function refreshList(): void {
     const filtered = getFiltered();
+    const currentKey = getFilterKey();
+    const filtersChanged = currentKey !== lastFilterKey;
+    lastFilterKey = currentKey;
 
-    // Empty state.
     if (!filtered.length) {
       reqList.innerHTML = '';
-      const empty = makeEl('div', 'np-empty', 'No requests captured yet');
-      reqList.appendChild(empty);
-    } else {
+      renderedIds.clear();
+      reqList.appendChild(makeEl('div', 'np-empty', 'No requests captured yet'));
+    } else if (filtersChanged) {
+      // Full re-render without animation (filter change — all rows are "already known")
       reqList.innerHTML = '';
+      renderedIds.clear();
       for (const r of filtered) {
-        const row = makeEl('div', 'np-req-row');
-        if (r.id === selectedId) row.classList.add('selected');
-        if (r.status >= 400 && r.status < 500) row.classList.add('is-4xx');
-        if (r.status >= 500) row.classList.add('is-5xx');
-        if (r.duration > 500) row.classList.add('is-slow');
-        row.dataset['id'] = r.id;
-
-        const badge = makeEl('span', `np-method-badge ${methodClass(r.method)}`, r.method);
-        row.appendChild(badge);
-
-        const pathwrap = makeEl('div', 'np-rr-pathwrap');
-        const pathEl = makeEl('div', 'np-rr-path', r.path + (r.query ? `?${r.query}` : ''));
-        pathwrap.appendChild(pathEl);
-        const label = smartLabel(r.method, r.path);
-        if (label) {
-          const labelEl = makeEl('span', 'np-rr-smart-label', label);
-          pathwrap.appendChild(labelEl);
-        }
-        row.appendChild(pathwrap);
-
-        const statusEl = makeEl('span', `np-rr-status ${statusClass(r.status)}`, r.status ? String(r.status) : '—');
-        row.appendChild(statusEl);
-
-        const durEl = makeEl('span', 'np-rr-dur', formatDuration(r.duration));
-        row.appendChild(durEl);
-
-        row.addEventListener('click', () => selectRequest(r.id));
+        const row = buildRow(r);
+        row.style.animation = 'none';
         reqList.appendChild(row);
+        renderedIds.add(r.id);
+      }
+    } else {
+      // Incremental update: remove gone rows, append new ones with animation
+      reqList.querySelector('.np-empty')?.remove();
+
+      const filteredIds = new Set(filtered.map((r) => r.id));
+      for (const id of renderedIds) {
+        if (!filteredIds.has(id)) {
+          reqList.querySelector(`[data-id="${id}"]`)?.remove();
+          renderedIds.delete(id);
+        }
+      }
+
+      let hadNew = false;
+      for (const r of filtered) {
+        if (!renderedIds.has(r.id)) {
+          reqList.appendChild(buildRow(r));
+          renderedIds.add(r.id);
+          hadNew = true;
+        }
+      }
+
+      if (hadNew) {
+        requestAnimationFrame(() => { reqList.scrollTop = reqList.scrollHeight; });
       }
     }
 
     updateStatusBar();
-
-    // Re-render detail if currently selected.
     if (selectedId) {
       const r = getSelectedRequest();
       if (r) renderDetailHeader(r);

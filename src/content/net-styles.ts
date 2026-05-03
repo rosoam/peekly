@@ -206,6 +206,11 @@ export const netPanelCss = `
 .np-req-list::-webkit-scrollbar { width: 8px; }
 .np-req-list::-webkit-scrollbar-thumb { background: var(--np-bg-control); border-radius: 4px; }
 
+@keyframes npRowIn {
+  from { opacity: 0; transform: translateX(-4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
 .np-req-row {
   display: flex;
   align-items: center;
@@ -215,6 +220,7 @@ export const netPanelCss = `
   min-height: 32px;
   border-bottom: 1px solid var(--np-sep-2);
   transition: background 0.08s;
+  animation: npRowIn 0.16s ease forwards;
 }
 .np-req-row:hover { background: var(--np-bg-hover); }
 .np-req-row.selected {
