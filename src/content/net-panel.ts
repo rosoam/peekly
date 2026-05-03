@@ -14,6 +14,7 @@ import { netPanelCss } from './net-styles';
 export type NetPanelHandle = {
   element: HTMLElement;
   onNewRequest: () => void;
+  isInputFocused: () => boolean;
   destroy: () => void;
 };
 
@@ -342,6 +343,9 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
     filterSearch = searchInput.value;
     refreshList();
   });
+  let searchFocused = false;
+  searchInput.addEventListener('focus', () => { searchFocused = true; });
+  searchInput.addEventListener('blur', () => { searchFocused = false; });
   searchWrap.appendChild(searchInput);
   ctrlbar.appendChild(searchWrap);
 
@@ -1685,6 +1689,7 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
       runAnalysisOnNew();
       refreshList();
     },
+    isInputFocused: () => searchFocused,
     destroy: () => panelDestroy(),
   };
 }

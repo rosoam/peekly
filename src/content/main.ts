@@ -814,8 +814,10 @@ function handleKeyDown(ev: KeyboardEvent): void {
   // Network panel toggle works regardless of picker enabled state.
   if (!isEditingEvent(ev) && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
     if (ev.key.toLowerCase() === 'y' && !ev.repeat) {
-      toggleNetPanel();
-      return;
+      if (!state.netPanelHandle?.isInputFocused()) {
+        toggleNetPanel();
+        return;
+      }
     }
   }
 
