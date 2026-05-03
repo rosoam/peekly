@@ -312,10 +312,6 @@ export const netPanelCss = `
 .np-req-row.is-slow .np-rr-dur {
   color: #ff9f0a;
 }
-.np-req-row.is-slow .np-rr-dur::before {
-  content: '⏱\a0';
-  font-size: 9px;
-}
 
 .np-empty {
   padding: 32px 16px;

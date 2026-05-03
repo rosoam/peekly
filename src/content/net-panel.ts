@@ -338,8 +338,12 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
 
   ctrlbar.appendChild(makeEl('div', 'np-sep'));
 
-  const slowBtn = makeEl('button', 'np-sf', 'SLOW');
+  const slowBtn = makeEl('button', 'np-sf') as HTMLButtonElement;
   slowBtn.type = 'button';
+  slowBtn.appendChild(makeEl('span', 'np-btn-label', 'SLOW'));
+  const slowCountSpan = document.createElement('span');
+  slowCountSpan.className = 'np-btn-count';
+  slowBtn.appendChild(slowCountSpan);
   slowBtn.addEventListener('click', () => {
     filterSlow = !filterSlow;
     slowBtn.classList.toggle('active', filterSlow);
@@ -733,6 +737,8 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
       const n = sc[s] ?? 0;
       span.textContent = n > 0 ? String(n) : '';
     }
+    const slowN = reqs.filter((r) => r.duration > 500).length;
+    slowCountSpan.textContent = slowN > 0 ? String(slowN) : '';
   }
 
   function refreshList(): void {
