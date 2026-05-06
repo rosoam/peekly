@@ -177,6 +177,7 @@ export type OwnerInfo = {
   name: string;
   kind: ComponentKind;
   source: SourceLocation | null;
+  fiberId?: string;
 };
 
 export type SerializedValue =

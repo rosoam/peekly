@@ -238,6 +238,7 @@ export const netPanelCss = `
 }
 
 .np-req-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -247,6 +248,30 @@ export const netPanelCss = `
   border-bottom: 1px solid var(--np-sep-2);
   transition: background 0.08s;
   animation: npRowIn 0.16s ease forwards;
+}
+
+@keyframes npCopiedFloat {
+  0%   { opacity: 0; transform: translate(8px, -50%) scale(0.92); }
+  18%  { opacity: 1; transform: translate(0, -50%) scale(1); }
+  72%  { opacity: 1; transform: translate(0, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(0, calc(-50% - 6px)) scale(1); }
+}
+.np-rr-copied {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(135deg, #32d74b, #28a745);
+  color: #0d0d0d;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(50,215,75,0.35), 0 0 0 1px rgba(50,215,75,0.5);
+  animation: npCopiedFloat 1.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  z-index: 2;
 }
 .np-req-row:hover { background: var(--np-bg-hover); }
 .np-req-row.selected {
@@ -392,17 +417,36 @@ export const netPanelCss = `
 .np-dv-status.s-0   { color: var(--np-label-3); }
 .np-dv-dur { font-size: 11px; color: var(--np-label-3); }
 .np-dv-copy-bundle {
-  background: var(--np-blue-2);
-  border: 1px solid rgba(10,132,255,0.45);
-  color: var(--np-blue);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(180deg, rgba(10,132,255,0.28), rgba(10,132,255,0.18));
+  border: 1px solid rgba(10,132,255,0.55);
+  color: #4ea2ff;
   font-size: 11px;
   font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 4px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 5px;
   cursor: pointer;
   flex-shrink: 0;
+  letter-spacing: 0.01em;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 2px 6px rgba(10,132,255,0.18);
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease, transform 0.08s ease;
 }
-.np-dv-copy-bundle:hover { background: rgba(10,132,255,0.3); }
+.np-dv-copy-bundle:hover {
+  background: linear-gradient(180deg, rgba(10,132,255,0.4), rgba(10,132,255,0.26));
+  color: #79bdff;
+  border-color: rgba(10,132,255,0.75);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 3px 10px rgba(10,132,255,0.32);
+}
+.np-dv-copy-bundle:active { transform: translateY(1px); }
+.np-dv-copy-bundle .np-dv-copy-icon { flex-shrink: 0; opacity: 0.95; }
+.np-dv-copy-bundle.copied {
+  background: linear-gradient(180deg, rgba(50,215,75,0.32), rgba(50,215,75,0.2));
+  border-color: rgba(50,215,75,0.7);
+  color: #5fe07a;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 3px 10px rgba(50,215,75,0.32);
+}
 .np-dv-copy-curl,
 .np-dv-copy-ts {
   background: var(--np-bg-elevated);

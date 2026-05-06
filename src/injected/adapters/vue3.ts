@@ -243,6 +243,7 @@ function walkParentChain(instance: ComponentInternalInstance, max: number): Owne
       name: getComponentName(cur.type),
       kind: getComponentKind(cur.type),
       source: getComponentSource(cur.type),
+      fiberId: registerInstance(cur),
     });
     cur = cur.parent;
   }

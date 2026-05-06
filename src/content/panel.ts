@@ -31,7 +31,7 @@ export type RenderPanelOptions = {
 function formatValue(v: SerializedValue): string {
   switch (v.type) {
     case 'primitive':
-      if (typeof v.value === 'string') return JSON.stringify(v.value);
+      if (typeof v.value === 'string') return v.value;
       return String(v.value);
     case 'undefined':
       return 'undefined';
@@ -176,6 +176,7 @@ function selectElementContents(root: ShadowRoot, el: Element): void {
 const ICON_COPY = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
 const ICON_INSTANCES = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`;
 const ICON_DRAG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg>`;
+const ICON_STYLES = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>`;
 
 // ─── Drag handling ───────────────────────────────────────────────────
 
@@ -218,13 +219,19 @@ function attachDrag(
 
 // ─── Sections ────────────────────────────────────────────────────────
 
+type HeaderHandle = {
+  el: HTMLElement;
+  setStylesActive(active: boolean): void;
+};
+
 function buildHeader(
   root: ShadowRoot,
   info: ComponentInfo,
   onClose: () => void,
   onCopy: CopyFn,
   onToggleInstances: () => void,
-): HTMLElement {
+  onToggleStyles: () => void,
+): HeaderHandle {
   const header = document.createElement('div');
   header.className = 'panel-header';
 
@@ -257,6 +264,9 @@ function buildHeader(
   const actions = document.createElement('div');
   actions.className = 'panel-actions';
 
+  const stylesBtn = makeIconBtn(ICON_STYLES, 'Show computed styles & classes', onToggleStyles);
+  actions.append(stylesBtn);
+
   const instancesBtn = makeIconBtn(ICON_INSTANCES, 'Highlight all instances on page', onToggleInstances);
   actions.append(instancesBtn);
 
@@ -266,7 +276,18 @@ function buildHeader(
   actions.append(closeBtn);
 
   header.append(dragHandle, title, actions);
-  return header;
+
+  return {
+    el: header,
+    setStylesActive(active: boolean) {
+      stylesBtn.classList.toggle('active', active);
+      stylesBtn.title = active ? 'Back to component view' : 'Show computed styles & classes';
+      stylesBtn.setAttribute(
+        'aria-label',
+        active ? 'Back to component view' : 'Show computed styles & classes',
+      );
+    },
+  };
 }
 
 function buildSourceCard(
@@ -440,7 +461,7 @@ function buildRenderSection(): { section: HTMLElement; setCount: (n: number, whe
   return { section, setCount };
 }
 
-function buildPropsSection(info: ComponentInfo): HTMLElement | null {
+function buildPropsSection(info: ComponentInfo, onCopy: CopyFn): HTMLElement | null {
   const entries = Object.entries(info.props);
   if (entries.length === 0) return null;
 
@@ -455,7 +476,7 @@ function buildPropsSection(info: ComponentInfo): HTMLElement | null {
   list.className = 'props-list';
   const showAll = entries.length <= PROPS_INITIAL;
   const initial = showAll ? entries : entries.slice(0, PROPS_INITIAL);
-  for (const [key, val] of initial) list.append(buildPropRow(key, val));
+  for (const [key, val] of initial) list.append(buildPropRow(key, val, onCopy));
   section.append(list);
 
   if (!showAll) {
@@ -465,7 +486,7 @@ function buildPropsSection(info: ComponentInfo): HTMLElement | null {
     more.className = 'more-btn';
     more.textContent = `+${remaining.length} more`;
     more.addEventListener('click', () => {
-      for (const [k, v] of remaining) list.append(buildPropRow(k, v));
+      for (const [k, v] of remaining) list.append(buildPropRow(k, v, onCopy));
       more.remove();
     });
     section.append(more);
@@ -473,7 +494,7 @@ function buildPropsSection(info: ComponentInfo): HTMLElement | null {
   return section;
 }
 
-function buildPropRow(key: string, val: SerializedValue): HTMLElement {
+function buildPropRow(key: string, val: SerializedValue, onCopy: CopyFn): HTMLElement {
   const row = document.createElement('div');
   row.className = 'prop-row';
   const k = document.createElement('span');
@@ -481,26 +502,29 @@ function buildPropRow(key: string, val: SerializedValue): HTMLElement {
   k.textContent = key;
   const v = document.createElement('span');
   v.className = 'prop-val';
-  v.textContent = formatValue(val);
-  v.title = formatValue(val);
-  row.append(k, v);
+  const formatted = formatValue(val);
+  v.textContent = formatted;
+  v.title = formatted;
+  const copyBtn = makeIconBtn(ICON_COPY, `Copy ${key}`, () => onCopy(formatted));
+  copyBtn.classList.add('row-copy');
+  row.append(k, v, copyBtn);
   return row;
 }
 
 // ─── Computed styles section ─────────────────────────────────────────
 
-const COMPUTED_KEYS: { label: string; prop: string; format?: (v: string) => string }[] = [
-  { label: 'display', prop: 'display' },
-  { label: 'position', prop: 'position' },
-  { label: 'z-index', prop: 'z-index' },
-  { label: 'background', prop: 'background-color', format: shortenColor },
-  { label: 'color', prop: 'color', format: shortenColor },
-  { label: 'font', prop: 'font', format: shortenFont },
-  { label: 'size', prop: 'box', format: () => '' },
-  { label: 'padding', prop: 'padding', format: shortenSpacing },
-  { label: 'margin', prop: 'margin', format: shortenSpacing },
-  { label: 'border', prop: 'border', format: shortenBorder },
-  { label: 'radius', prop: 'border-radius' },
+const COMPUTED_KEYS: { label: string; prop: string; editable: boolean; format?: (v: string) => string }[] = [
+  { label: 'display', prop: 'display', editable: true },
+  { label: 'position', prop: 'position', editable: true },
+  { label: 'z-index', prop: 'z-index', editable: true },
+  { label: 'background', prop: 'background-color', editable: true, format: shortenColor },
+  { label: 'color', prop: 'color', editable: true, format: shortenColor },
+  { label: 'font', prop: 'font', editable: false, format: shortenFont },
+  { label: 'size', prop: 'box', editable: false, format: () => '' },
+  { label: 'padding', prop: 'padding', editable: true, format: shortenSpacing },
+  { label: 'margin', prop: 'margin', editable: true, format: shortenSpacing },
+  { label: 'border', prop: 'border', editable: true, format: shortenBorder },
+  { label: 'radius', prop: 'border-radius', editable: true },
 ];
 
 function shortenColor(v: string): string {
@@ -547,6 +571,10 @@ function buildComputedSection(el: Element): HTMLElement | null {
   body.className = 'computed-list';
 
   for (const k of COMPUTED_KEYS) {
+    if (k.editable) {
+      body.append(buildEditableCssRow(el, k.prop, k.label, k.format));
+      continue;
+    }
     let value = '';
     if (k.label === 'font') {
       const fs = cs.getPropertyValue('font-size');
@@ -556,13 +584,11 @@ function buildComputedSection(el: Element): HTMLElement | null {
     } else if (k.label === 'size') {
       const r = el.getBoundingClientRect();
       value = `${Math.round(r.width)} × ${Math.round(r.height)}px`;
-    } else {
-      const raw = cs.getPropertyValue(k.prop);
-      value = k.format ? k.format(raw) : raw;
     }
     if (!value) continue;
     body.append(buildKvRow(k.label, value));
   }
+  body.append(buildAddCssRow(el, 'kv'));
   details.append(body);
   return details;
 }
@@ -578,6 +604,154 @@ function buildKvRow(key: string, val: string): HTMLElement {
   v.textContent = val;
   v.title = val;
   row.append(k, v);
+  return row;
+}
+
+// ─── Editable CSS rows (used by Computed section + tooltip CSS tab) ──
+
+type CssRowVariant = 'kv' | 'tt';
+
+function cssRowClasses(variant: CssRowVariant): { row: string; key: string; val: string } {
+  return variant === 'tt'
+    ? { row: 'tt-kv tt-kv-edit', key: 'tt-kv-key', val: 'tt-kv-val tt-kv-input' }
+    : { row: 'kv-row kv-row-edit', key: 'kv-key', val: 'kv-val kv-input' };
+}
+
+export function buildEditableCssRow(
+  el: HTMLElement,
+  prop: string,
+  label: string,
+  formatRead?: (v: string) => string,
+  variant: CssRowVariant = 'kv',
+): HTMLElement {
+  const c = cssRowClasses(variant);
+  const row = document.createElement('div');
+  row.className = c.row;
+
+  const k = document.createElement('span');
+  k.className = c.key;
+  k.textContent = label;
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = c.val;
+  input.spellcheck = false;
+
+  const refresh = (): void => {
+    const cs = window.getComputedStyle(el);
+    const inline = el.style.getPropertyValue(prop);
+    const raw = (inline || cs.getPropertyValue(prop)).trim();
+    input.dataset.raw = raw;
+    const display = formatRead ? formatRead(raw) || raw : raw;
+    input.value = display;
+    input.title = raw;
+  };
+  refresh();
+
+  input.addEventListener('focus', () => {
+    input.value = input.dataset.raw ?? '';
+    input.select();
+  });
+
+  let committedViaKey = false;
+  input.addEventListener('blur', () => {
+    if (committedViaKey) {
+      committedViaKey = false;
+      return;
+    }
+    const desired = input.value.trim();
+    const current = input.dataset.raw ?? '';
+    if (desired !== current) {
+      try {
+        el.style.setProperty(prop, desired);
+      } catch {
+        /* invalid value — refresh restores last known */
+      }
+    }
+    refresh();
+  });
+
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      const desired = input.value.trim();
+      try {
+        el.style.setProperty(prop, desired);
+      } catch {
+        /* noop */
+      }
+      committedViaKey = true;
+      input.blur();
+      refresh();
+    } else if (ev.key === 'Escape') {
+      ev.preventDefault();
+      input.value = input.dataset.raw ?? '';
+      committedViaKey = true;
+      input.blur();
+    }
+  });
+
+  row.append(k, input);
+  return row;
+}
+
+export function buildAddCssRow(el: HTMLElement, variant: CssRowVariant = 'kv'): HTMLElement {
+  const c = cssRowClasses(variant);
+  const row = document.createElement('div');
+  row.className = `${c.row.split(' ')[0]} ${variant === 'tt' ? 'tt-kv-add' : 'kv-row-add'}`;
+
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.className = `${c.key} ${variant === 'tt' ? 'tt-kv-input' : 'kv-input'} kv-input-name`;
+  nameInput.placeholder = '+ property';
+  nameInput.spellcheck = false;
+
+  const valInput = document.createElement('input');
+  valInput.type = 'text';
+  valInput.className = `${c.val.split(' ')[0]} ${variant === 'tt' ? 'tt-kv-input' : 'kv-input'}`;
+  valInput.placeholder = 'value';
+  valInput.spellcheck = false;
+
+  function commit(): boolean {
+    const prop = nameInput.value.trim();
+    const val = valInput.value.trim();
+    if (!prop || !val) return false;
+    try {
+      el.style.setProperty(prop, val);
+    } catch {
+      return false;
+    }
+    const newRow = buildEditableCssRow(el, prop, prop, undefined, variant);
+    row.parentElement?.insertBefore(newRow, row);
+    nameInput.value = '';
+    valInput.value = '';
+    return true;
+  }
+
+  nameInput.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter' || ev.key === 'Tab') {
+      if (nameInput.value.trim()) {
+        ev.preventDefault();
+        valInput.focus();
+      }
+    } else if (ev.key === 'Escape') {
+      nameInput.value = '';
+      valInput.value = '';
+      nameInput.blur();
+    }
+  });
+  valInput.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      if (commit()) nameInput.focus();
+    } else if (ev.key === 'Escape') {
+      nameInput.value = '';
+      valInput.value = '';
+      valInput.blur();
+    }
+  });
+
+  row.append(nameInput, valInput);
   return row;
 }
 
@@ -832,21 +1006,43 @@ function buildHintsSection(info: ComponentInfo, el: Element | null): HTMLElement
 
 // ─── Owner chain ─────────────────────────────────────────────────────
 
-function buildOwnerSection(info: ComponentInfo, editor: EditorId): HTMLElement | null {
+function buildOwnerSection(
+  info: ComponentInfo,
+  editor: EditorId,
+  onNavigate: NavigateFn,
+  onChipHover: ChipHoverFn,
+): HTMLElement | null {
   if (info.ownerChain.length === 0) return null;
   const section = document.createElement('section');
   section.className = 'section';
+  section.addEventListener('mouseleave', () => onChipHover(null));
   const heading = document.createElement('h4');
   heading.className = 'section-title';
   heading.textContent = 'Rendered by';
   section.append(heading);
-  for (const owner of info.ownerChain) section.append(buildOwnerRow(owner, editor));
+  for (const owner of info.ownerChain) {
+    section.append(buildOwnerRow(owner, editor, onNavigate, onChipHover));
+  }
   return section;
 }
 
-function buildOwnerRow(owner: OwnerInfo, editor: EditorId): HTMLElement {
-  const row = document.createElement('div');
+function buildOwnerRow(
+  owner: OwnerInfo,
+  editor: EditorId,
+  onNavigate: NavigateFn,
+  onChipHover: ChipHoverFn,
+): HTMLElement {
+  const navigable = !!owner.fiberId;
+  const row = document.createElement(navigable ? 'button' : 'div');
   row.className = 'owner-row';
+  if (navigable) {
+    (row as HTMLButtonElement).type = 'button';
+    row.classList.add('owner-row-nav');
+    const fiberId = owner.fiberId!;
+    row.addEventListener('click', () => onNavigate(fiberId));
+    row.addEventListener('mouseenter', () => onChipHover(fiberId));
+    row.addEventListener('mouseleave', () => onChipHover(null));
+  }
 
   const arrow = document.createElement('span');
   arrow.className = 'owner-arrow';
@@ -870,9 +1066,10 @@ function buildOwnerRow(owner: OwnerInfo, editor: EditorId): HTMLElement {
       if (url) {
         src.classList.add('clickable');
         src.title = `Open ${pathString(owner.source)} in ${editorLabel(editor)}`;
-        src.addEventListener('click', () =>
-          chrome.runtime.sendMessage({ kind: 'open-editor', url }),
-        );
+        src.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          chrome.runtime.sendMessage({ kind: 'open-editor', url });
+        });
       }
     }
     main.append(src);
@@ -916,37 +1113,54 @@ export function renderPanel(root: ShadowRoot, opts: RenderPanelOptions): PanelHa
   // Hovering anywhere outside the nav section should clear the preview highlight.
   panel.addEventListener('mouseleave', () => onChipHover(null));
 
-  const body = document.createElement('div');
-  body.className = 'panel-body';
-
-  body.append(buildSourceCard(info, editor, onCopy));
-
-  const navSection = buildNavSection(info, onNavigate, onChipHover);
-  if (navSection) body.append(navSection);
-
   const renderSection = buildRenderSection();
-  body.append(renderSection.section);
 
-  const propsSection = buildPropsSection(info);
-  if (propsSection) body.append(propsSection);
+  let viewMode: 'base' | 'styles' = 'base';
 
-  const computedSection = buildComputedSection(targetEl ?? document.body);
-  if (computedSection) body.append(computedSection);
+  function buildBody(): HTMLElement {
+    const b = document.createElement('div');
+    b.className = 'panel-body';
+    if (viewMode === 'base') {
+      b.append(buildSourceCard(info, editor, onCopy));
+      const navSection = buildNavSection(info, onNavigate, onChipHover);
+      if (navSection) b.append(navSection);
+      b.append(renderSection.section);
+      const propsSection = buildPropsSection(info, onCopy);
+      if (propsSection) b.append(propsSection);
+      const a11ySection = buildA11ySection(targetEl);
+      if (a11ySection) b.append(a11ySection);
+      const hintsSection = buildHintsSection(info, targetEl);
+      if (hintsSection) b.append(hintsSection);
+      const ownerSection = buildOwnerSection(info, editor, onNavigate, onChipHover);
+      if (ownerSection) b.append(ownerSection);
+    } else {
+      const computedSection = buildComputedSection(targetEl ?? document.body);
+      if (computedSection) {
+        computedSection.setAttribute('open', '');
+        b.append(computedSection);
+      }
+      const tailwindSection = buildTailwindSection(targetEl);
+      if (tailwindSection) {
+        tailwindSection.setAttribute('open', '');
+        b.append(tailwindSection);
+      }
+    }
+    return b;
+  }
 
-  const tailwindSection = buildTailwindSection(targetEl);
-  if (tailwindSection) body.append(tailwindSection);
+  let body = buildBody();
 
-  const a11ySection = buildA11ySection(targetEl);
-  if (a11ySection) body.append(a11ySection);
+  function toggleStyles(): void {
+    viewMode = viewMode === 'base' ? 'styles' : 'base';
+    const newBody = buildBody();
+    body.replaceWith(newBody);
+    body = newBody;
+    headerHandle.setStylesActive(viewMode === 'styles');
+  }
 
-  const hintsSection = buildHintsSection(info, targetEl);
-  if (hintsSection) body.append(hintsSection);
-
-  const ownerSection = buildOwnerSection(info, editor);
-  if (ownerSection) body.append(ownerSection);
-
-  const header = buildHeader(root, info, onClose, onCopy, onToggleInstances);
-  panel.append(header, body, buildFooter(info, onCopy));
+  const headerHandle = buildHeader(root, info, onClose, onCopy, onToggleInstances, toggleStyles);
+  panel.append(headerHandle.el, body, buildFooter(info, onCopy));
+  attachDrag(panel, headerHandle.el, onPositionChange);
 
   if (initialPosition) {
     panel.style.left = `${initialPosition.x}px`;
@@ -954,8 +1168,6 @@ export function renderPanel(root: ShadowRoot, opts: RenderPanelOptions): PanelHa
     panel.style.right = 'auto';
     panel.style.bottom = 'auto';
   }
-
-  attachDrag(panel, header, onPositionChange);
 
   root.append(panel);
 

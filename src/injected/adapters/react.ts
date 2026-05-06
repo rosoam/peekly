@@ -251,7 +251,12 @@ function extractOwnerChain(fiber: Fiber, max = 10): OwnerInfo[] {
   let cur: Fiber | null = fiber._debugOwner ?? fiber.return ?? null;
   while (cur && chain.length < max) {
     if (isComponentFiber(cur)) {
-      chain.push({ name: getComponentName(cur.type), kind: fiberKind(cur), source: extractSource(cur) });
+      chain.push({
+        name: getComponentName(cur.type),
+        kind: fiberKind(cur),
+        source: extractSource(cur),
+        fiberId: registerFiber(cur),
+      });
     }
     cur = cur._debugOwner ?? cur.return ?? null;
   }

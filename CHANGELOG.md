@@ -9,23 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Call stack in network requests** — each captured request now carries the JS call stack that triggered it (up to 12 user-land frames, webpack/node_modules internals filtered out). Displayed in the Overview tab as a scrollable frame list with per-frame copy buttons and a "Copy all" button on the section header. The call stack is also included in the per-request debug bundle (Copy all in the Request tab).
-
-- **N+1 dialog: stats, severity, and Copy all** — the N+1 Patterns overlay now shows for each pattern: a stats row with avg duration, total time wasted, and first/last seen timestamps; a computed burst window in the count pill (replaces the hardcoded "in 3s"); three severity tiers (moderate / high / critical) with distinct colours and matching hint text; and a **Copy all** button in the overlay header that exports a structured N+1 debug bundle (all patterns, full request list per pattern, timing stats).
-
-### Changed
-
-- **Scroll isolation** — the cursor tooltip body and the Network Inspector panel (request list + tab panels) no longer scroll the host page when the cursor is inside them (`overscroll-behavior: contain` + `wheel stopPropagation`).
-- **Selected request row** — the focused request in the Network Inspector list now has a stronger indigo left border and background, making it easy to identify while inspecting its detail tabs.
-
-### Removed
-
-- **Smart labels in Overview tab** — the auto-generated human-readable label card has been removed from the Overview tab to reduce visual noise. Labels remain visible in the request list column.
-
-## [0.4.0] - 2026-05-03
-
-### Added
-
 - **Network Inspector** (`y` to toggle) — a floating draggable panel that captures every `fetch` and `XMLHttpRequest` call made by the page in real time, without any proxy or DevTools Protocol required. The capture runs entirely in the MAIN world by patching `window.fetch` and `window.XMLHttpRequest`; captured entries travel over `postMessage` to the isolated-world store before being displayed.
 
   Request entries carry: id, timestamp, method, URL (path + query + host), request headers and body, response headers and body, HTTP status, duration, and a component attribution derived from the call-site stack trace.
@@ -51,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Tooltip DOM tab improvements** — the DOM tab in the contextual tooltip now has a **Copy HTML** + **Copy classes** button group (replacing the single "Copy" button) and an attributes table with per-attribute rows showing name, truncated value, and an individual copy button on each row.
 
+- **Call stack in network requests** — each captured request now carries the JS call stack that triggered it (up to 12 user-land frames, webpack/node_modules internals filtered out). Displayed in the Overview tab as a scrollable frame list with per-frame copy buttons and a "Copy all" button on the section header. The call stack is also included in the per-request debug bundle (Copy all in the Request tab).
+
+- **N+1 dialog: stats, severity, and Copy all** — the N+1 Patterns overlay now shows for each pattern: a stats row with avg duration, total time wasted, and first/last seen timestamps; a computed burst window in the count pill (replaces the hardcoded "in 3s"); three severity tiers (moderate / high / critical) with distinct colours and matching hint text; and a **Copy all** button in the overlay header that exports a structured N+1 debug bundle (all patterns, full request list per pattern, timing stats).
+
 ### Changed
 
 - **Key bindings** — the binding scheme has been simplified:
@@ -58,6 +45,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **`y` keypress** toggles the Network Inspector panel.
   - **`Esc`** closes all overlays (tooltip, component panel, Network Inspector panel).
   - The `y + x` combo for the tooltip is gone; `y` is now exclusively the Network Inspector toggle.
+- **Scroll isolation** — the cursor tooltip body and the Network Inspector panel (request list + tab panels) no longer scroll the host page when the cursor is inside them (`overscroll-behavior: contain` + `wheel stopPropagation`).
+- **Selected request row** — the focused request in the Network Inspector list now has a stronger indigo left border and background, making it easy to identify while inspecting its detail tabs.
+
+### Fixed
+
+- **Right-click dismiss** — right-clicking during hold-`x` now toggles the floating tooltip off, so the box-model overlay is fully visible without the tooltip obscuring it. The dismissed state persists across key-release/re-press cycles; only the next right-click restores live tracking.
+- **Box-model overlay labels** — the px dimension labels in padding and margin overlay zones now render with a dark background badge, making them legible over any element colour.
+
+### Removed
+
+- **Smart labels in Overview tab** — the auto-generated human-readable label card has been removed from the Overview tab to reduce visual noise. Labels remain visible in the request list column.
 
 ## [0.3.0] - 2026-05-01
 
@@ -150,4 +148,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.0]: https://github.com/rosoam/peekly/releases/tag/v0.1.0
 [0.2.0]: https://github.com/rosoam/peekly/releases/tag/v0.2.0
 [0.3.0]: https://github.com/rosoam/peekly/releases/tag/v0.3.0
-[0.4.0]: https://github.com/rosoam/peekly/releases/tag/v0.4.0

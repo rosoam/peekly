@@ -14,3 +14,8 @@ demo/.vite/
 .pw-profile/
 screenshots/
 playwright-report/
+
+# OAuth / secrets — never commit
+client_secret*.json
+*.env
+.env*

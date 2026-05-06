@@ -402,9 +402,10 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
   const dvUrl = makeEl('span', 'np-dv-url');
   const dvStatus = makeEl('span', 'np-dv-status');
   const dvDur = makeEl('span', 'np-dv-dur');
-  const dvCopyBundle = makeEl('button', 'np-dv-copy-bundle', 'Copy');
+  const dvCopyBundle = makeEl('button', 'np-dv-copy-bundle');
   dvCopyBundle.type = 'button';
   dvCopyBundle.title = 'Copy debug bundle';
+  dvCopyBundle.innerHTML = '<svg class="np-dv-copy-icon" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="9" height="9" rx="1.5"/><path d="M5.5 2.5h7a1 1 0 0 1 1 1v7"/></svg><span class="np-dv-copy-label">Copy bundle</span>';
   const dvCopyCurl = makeEl('button', 'np-dv-copy-curl', 'cURL');
   dvCopyCurl.type = 'button';
   const dvCopyTs = makeEl('button', 'np-dv-copy-ts', 'TS');
@@ -535,6 +536,15 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
     const r = getSelectedRequest();
     if (!r) return;
     void opts.onCopy(buildDebugBundle(r));
+    dvCopyBundle.classList.add('copied');
+    const labelEl = dvCopyBundle.querySelector('.np-dv-copy-label');
+    if (labelEl) {
+      labelEl.textContent = 'Copié !';
+      setTimeout(() => {
+        dvCopyBundle.classList.remove('copied');
+        labelEl.textContent = 'Copy bundle';
+      }, 1300);
+    }
   });
 
   intelBtn.addEventListener('click', () => {
@@ -710,8 +720,19 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
 
     row.appendChild(makeEl('span', `np-rr-status ${statusClass(r.status)}`, r.status ? String(r.status) : '—'));
     row.appendChild(makeEl('span', 'np-rr-dur', formatDuration(r.duration)));
-    row.addEventListener('click', () => selectRequest(r.id));
+    row.addEventListener('click', () => {
+      selectRequest(r.id);
+      void opts.onCopy(buildDebugBundle(r));
+      flashRowCopied(row);
+    });
     return row;
+  }
+
+  function flashRowCopied(row: HTMLElement): void {
+    row.querySelector('.np-rr-copied')?.remove();
+    const badge = makeEl('span', 'np-rr-copied', '✓ Copié');
+    row.appendChild(badge);
+    setTimeout(() => badge.remove(), 1300);
   }
 
   function getFilterKey(): string {

@@ -38,6 +38,52 @@ export const overlayCss = `
   letter-spacing: 0.02em;
 }
 
+/* ─── Box model overlay ──────────────────────────────────────────── */
+
+.bm-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bm-content {
+  position: fixed;
+  pointer-events: none;
+  border: 1px dashed rgba(167, 139, 250, 0.65);
+  background: rgba(139, 92, 246, 0.12);
+  border-radius: 2px;
+  display: none;
+  overflow: hidden;
+}
+
+.bm-margin {
+  position: fixed;
+  pointer-events: none;
+  background: rgba(246, 173, 85, 0.25);
+  display: none;
+  overflow: hidden;
+}
+
+.bm-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  letter-spacing: 0.02em;
+  background: rgba(0, 0, 0, 0.52);
+  padding: 1px 4px;
+  border-radius: 3px;
+  max-width: calc(100% - 6px);
+}
+
 /* ─── Preview highlight (chip hover in panel) ─────────────────────── */
 
 .preview-highlight {
@@ -214,6 +260,12 @@ export const overlayCss = `
 
 .icon-btn:active {
   transform: translateY(1px);
+}
+
+.icon-btn.active {
+  background: rgba(99, 102, 241, 0.22);
+  color: #c7d2fe;
+  border-color: rgba(99, 102, 241, 0.5);
 }
 
 .icon-btn svg {
@@ -513,6 +565,7 @@ export const overlayCss = `
 .props-list { display: flex; flex-direction: column; }
 
 .prop-row {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 28%) minmax(0, 1fr);
   gap: 10px;
@@ -524,6 +577,35 @@ export const overlayCss = `
 }
 
 .prop-row:first-child { border-top: none; }
+
+.row-copy {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  opacity: 0;
+  pointer-events: none;
+  background: rgba(13, 13, 13, 0.92);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: opacity 100ms ease, background 100ms ease, color 100ms ease;
+}
+
+.row-copy svg { width: 12px; height: 12px; }
+
+.prop-row:hover .row-copy {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.row-copy:hover {
+  background: rgba(99, 102, 241, 0.22);
+  color: #c7d2fe;
+  border-color: rgba(99, 102, 241, 0.45);
+}
 
 .prop-key {
   color: #fbbf24;
@@ -614,6 +696,42 @@ export const overlayCss = `
 }
 .kv-val::-webkit-scrollbar-track { background: transparent; }
 
+/* Editable computed rows (inline CSS editing) */
+.kv-input {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: #d4d4d4;
+  font: inherit;
+  padding: 1px 4px;
+  margin: -1px 0;
+  outline: none;
+  min-width: 0;
+  width: 100%;
+  transition: background 100ms ease, border-color 100ms ease;
+}
+
+.kv-row-edit:hover .kv-input {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.kv-input:focus {
+  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.45);
+  color: #fff;
+  cursor: text;
+}
+
+.kv-row-add .kv-input-name {
+  color: #86efac;
+}
+
+.kv-row-add .kv-input::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+  font-style: italic;
+}
+
 /* ─── Tailwind decode ─────────────────────────────────────────────── */
 
 .tw-groups {
@@ -697,6 +815,28 @@ export const overlayCss = `
   gap: 8px;
   align-items: baseline;
   padding: 4px 0;
+  text-align: left;
+  width: 100%;
+  background: transparent;
+  border: none;
+  font: inherit;
+  color: inherit;
+}
+
+button.owner-row.owner-row-nav {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 4px 6px;
+  margin: 0 -6px;
+  transition: background 100ms ease;
+}
+
+button.owner-row.owner-row-nav:hover {
+  background: rgba(99, 102, 241, 0.12);
+}
+
+button.owner-row.owner-row-nav:hover .owner-name {
+  color: #c7d2fe;
 }
 
 .owner-arrow {
@@ -953,6 +1093,42 @@ export const overlayCss = `
   gap: 3px;
 }
 
+/* Editable CSS rows in tooltip */
+.tt-kv-input {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: #d4d4d4;
+  font: inherit;
+  padding: 1px 4px;
+  margin: -1px 0;
+  outline: none;
+  min-width: 0;
+  width: 100%;
+  transition: background 100ms ease, border-color 100ms ease;
+}
+
+.tt-kv-edit:hover .tt-kv-input {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.tt-kv-input:focus {
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.45);
+  color: #fff;
+  cursor: text;
+}
+
+.tt-kv-add .tt-kv-input::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+  font-style: italic;
+}
+
+.tt-kv-add .kv-input-name {
+  color: #fbbf24;
+}
+
 .tt-chain {
   display: flex;
   flex-direction: column;
@@ -1063,6 +1239,11 @@ export const overlayCss = `
   margin-top: 2px;
 }
 
+.tt-html-attr-wrap {
+  position: relative;
+  padding-right: 26px;
+}
+
 .tt-html-attr {
   display: flex;
   align-items: baseline;
@@ -1147,6 +1328,10 @@ export const overlayCss = `
   font-size: 11px;
 }
 
+.tt-attr-row {
+  position: relative;
+}
+
 .tt-attr-row td {
   padding: 2px 0;
   vertical-align: top;
@@ -1155,6 +1340,11 @@ export const overlayCss = `
 
 .tt-attr-row:last-child td {
   border-bottom: none;
+}
+
+.tt-attr-copy-cell {
+  width: 22px;
+  position: relative;
 }
 
 .tt-attr-name {
@@ -1174,25 +1364,40 @@ export const overlayCss = `
   white-space: nowrap;
 }
 
-.tt-attr-copy-btn {
-  padding: 0 5px;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.07);
-  color: rgba(255,255,255,0.35);
-  border-radius: 3px;
+.tt-row-copy {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  background: rgba(13, 13, 13, 0.92);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  white-space: nowrap;
-  transition: background 100ms, color 100ms;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: opacity 100ms ease, background 100ms ease, color 100ms ease, border-color 100ms ease;
 }
 
-.tt-attr-copy-btn:hover {
-  background: rgba(99, 102, 241, 0.15);
+.tt-row-copy svg { width: 12px; height: 12px; }
+
+.tt-html-attr-wrap:hover .tt-row-copy,
+.tt-attr-row:hover .tt-row-copy {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.tt-row-copy:hover {
+  background: rgba(99, 102, 241, 0.22);
   color: #c7d2fe;
-  border-color: rgba(99, 102, 241, 0.35);
+  border-color: rgba(99, 102, 241, 0.45);
 }
 
 /* Children list — clickable to navigate */
@@ -1343,5 +1548,25 @@ export const overlayCss = `
   color: #fca5a5;
   font-size: 11px;
   font-family: ui-sans-serif, sans-serif;
+}
+
+/* ─── Tooltip spacing chips ─────────────────────────────────────── */
+
+.tt-spacing-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.tt-spacing-chip {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  padding: 2px 6px;
+  background: rgba(134, 239, 172, 0.08);
+  border: 1px solid rgba(134, 239, 172, 0.2);
+  color: #86efac;
+  border-radius: 4px;
+  white-space: nowrap;
 }
 `;

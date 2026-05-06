@@ -69,17 +69,17 @@ Peekly
 ### Short description
 
 ```
-Hold y and click to peek at any React component, DOM element, or CSS — fast, seamless, on any site.
+Hold x to inspect any component, DOM element, or CSS. Press y for the Network Inspector — fast, seamless, on any site.
 ```
 
-(Limit: 132 characters. The version above is 110.)
+(Limit: 132 characters. The version above is 125.)
 
 ### Detailed description
 
 ```
 Peekly is a near-invisible developer inspector that turns any web page into an interactive component map.
 
-Hold the y key, hover any element, and Peekly highlights the React component under your cursor. Click to open a floating panel with everything you need:
+Hold the x key, hover any element, and Peekly highlights the React component under your cursor with a contextual tooltip showing component details (Comp / DOM / CSS / A11y tabs). The tooltip is sticky: release x and it stays on screen for interaction. Click outside or press Esc to dismiss. Click while holding x to open a full floating panel with everything you need:
 
   • Source file — one-click "Open in VS Code / Cursor / WebStorm / Sublime"
   • Live re-render counter
@@ -91,7 +91,7 @@ Hold the y key, hover any element, and Peekly highlights the React component und
   • Hints for inline functions in props, dangerouslySetInnerHTML, very long classNames
   • Owner chain with clickable source links
 
-Hold y + x while hovering for a contextual tooltip that follows the cursor — a mini debugger with tabs for Component / DOM / CSS / A11y. The tooltip is sticky: once it appears, you can release both keys and it stays on screen for interaction. Click outside or press Esc to dismiss.
+Press y to toggle the Network Inspector — a floating draggable panel that captures every fetch and XHR request on the page in real time. Filter by method / status / search. See request details (headers, body, TypeScript interface generation), GraphQL analysis, call stack for each request, and N+1 pattern detection with severity tiers.
 
 Plain letter keys are intentional — they're easy to reach with one hand and don't collide with the OS / browser shortcuts that real modifiers (Option, Shift, Ctrl) tend to clash with. Peekly never captures keys while you're typing in a form field.
 

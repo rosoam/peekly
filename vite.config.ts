@@ -6,7 +6,7 @@ const manifest = defineManifest({
   name: 'Peekly',
   version: '0.3.0',
   description:
-    'Hold Y and click to peek at any React component, DOM element, or CSS. Hold Y + X for the contextual tooltip — on any site.',
+    'Hold x to inspect any component, DOM element, or CSS. Press y for the Network Inspector — fast, seamless, on any site.',
   homepage_url: 'https://github.com/rosoam/peekly',
   icons: {
     16: 'icons/16.png',

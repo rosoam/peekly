@@ -98,7 +98,12 @@ function ancestorChain(el: Element, max = 10): OwnerInfo[] {
   const chain: OwnerInfo[] = [];
   let cur: Element | null = el.parentElement;
   while (cur && chain.length < max && cur !== document.body && cur !== document.documentElement) {
-    chain.push({ name: selectorOf(cur), kind: 'host', source: null });
+    chain.push({
+      name: selectorOf(cur),
+      kind: 'host',
+      source: null,
+      fiberId: registerElement(cur),
+    });
     cur = cur.parentElement;
   }
   return chain;

@@ -1,4 +1,5 @@
 import type { ComponentPreview, EditorId, SourceLocation } from '../shared/messages';
+import { buildEditableCssRow, buildAddCssRow } from './panel';
 
 const TOOLTIP_WIDTH = 340;
 const TOOLTIP_OFFSET_X = 16;
@@ -125,6 +126,17 @@ function quickA11y(el: Element): string[] {
 
 // ─── DOM helpers ────────────────────────────────────────────────────
 
+function cssShorthand(cs: CSSStyleDeclaration, prop: 'margin' | 'padding'): string {
+  const t = cs.getPropertyValue(`${prop}-top`);
+  const r = cs.getPropertyValue(`${prop}-right`);
+  const b = cs.getPropertyValue(`${prop}-bottom`);
+  const l = cs.getPropertyValue(`${prop}-left`);
+  if (t === r && r === b && b === l) return t;
+  if (t === b && r === l) return `${t} ${r}`;
+  if (r === l) return `${t} ${r} ${b}`;
+  return `${t} ${r} ${b} ${l}`;
+}
+
 function shortColor(v: string): string {
   if (!v || v === 'rgba(0, 0, 0, 0)') return 'transparent';
   const m = v.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/);
@@ -250,7 +262,7 @@ function buildOpenTag(el: Element, copyOuterHtml: () => void, onCopy: (text: str
     const attrsList = document.createElement('div');
     attrsList.className = 'tt-html-attrs';
     for (const a of attrs) {
-      attrsList.append(buildAttr(a.name, a.value));
+      attrsList.append(buildAttr(a.name, a.value, onCopy));
     }
     wrap.append(attrsList);
 
@@ -293,7 +305,11 @@ function buildOpenTag(el: Element, copyOuterHtml: () => void, onCopy: (text: str
   return wrap;
 }
 
-function buildAttr(name: string, value: string): HTMLElement {
+const ICON_COPY_TT = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+
+function buildAttr(name: string, value: string, onCopy: (text: string) => void): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'tt-html-attr-wrap';
   const row = document.createElement('div');
   row.className = 'tt-html-attr';
   const k = document.createElement('span');
@@ -302,18 +318,22 @@ function buildAttr(name: string, value: string): HTMLElement {
   const eq = document.createElement('span');
   eq.className = 'tt-html-attr-eq';
   eq.textContent = '=';
-  const q1 = document.createElement('span');
-  q1.className = 'tt-html-attr-quote';
-  q1.textContent = '"';
   const v = document.createElement('span');
   v.className = 'tt-html-attr-value';
   v.textContent = value;
   v.title = value;
-  const q2 = document.createElement('span');
-  q2.className = 'tt-html-attr-quote';
-  q2.textContent = '"';
-  row.append(k, eq, q1, v, q2);
-  return row;
+  row.append(k, eq, v);
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'tt-row-copy';
+  copyBtn.title = `Copy ${name}`;
+  copyBtn.innerHTML = ICON_COPY_TT;
+  copyBtn.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    onCopy(value);
+  });
+  wrap.append(row, copyBtn);
+  return wrap;
 }
 
 function buildChildRow(child: Element, onNavigate: (el: Element) => void, onPreview: (el: Element | null) => void): HTMLElement {
@@ -398,13 +418,15 @@ function renderDomTab(
       tdName.title = a.name;
       const tdVal = document.createElement('td');
       tdVal.className = 'tt-attr-val';
-      tdVal.textContent = a.value || '""';
+      tdVal.textContent = a.value || '(empty)';
       tdVal.title = a.value;
       const tdCopy = document.createElement('td');
+      tdCopy.className = 'tt-attr-copy-cell';
       const copyBtn = document.createElement('button');
       copyBtn.type = 'button';
-      copyBtn.className = 'tt-attr-copy-btn';
-      copyBtn.textContent = 'Copy';
+      copyBtn.className = 'tt-row-copy';
+      copyBtn.title = `Copy ${a.name}`;
+      copyBtn.innerHTML = ICON_COPY_TT;
       const val = a.value;
       copyBtn.addEventListener('click', (ev) => {
         ev.stopPropagation();
@@ -439,7 +461,7 @@ function renderDomTab(
       const t = document.createElement('div');
       t.className = 'tt-dom-text';
       const truncated = text.length > 200 ? text.slice(0, 200) + '…' : text;
-      t.textContent = `"${truncated}"`;
+      t.textContent = truncated;
       t.title = text;
       body.append(t);
     } else {
@@ -471,14 +493,44 @@ function renderCssTab(body: HTMLElement, p: ComponentPreview, el: Element | null
 
   const grid = document.createElement('div');
   grid.className = 'tt-meta-grid';
-  grid.append(buildKv('display', cs.display));
-  grid.append(buildKv('position', cs.position));
+  // Editable single-prop rows
+  grid.append(buildEditableCssRow(el, 'display', 'display', undefined, 'tt'));
+  grid.append(buildEditableCssRow(el, 'position', 'position', undefined, 'tt'));
+  // Read-only composite (size = bounding rect)
   grid.append(buildKv('size', `${Math.round(r.width)}×${Math.round(r.height)}`));
-  grid.append(buildKv('z-index', cs.zIndex || 'auto'));
-  grid.append(buildKv('bg', shortColor(cs.backgroundColor)));
-  grid.append(buildKv('color', shortColor(cs.color)));
+  grid.append(buildKv('margin', cssShorthand(cs, 'margin')));
+  grid.append(buildKv('padding', cssShorthand(cs, 'padding')));
+  grid.append(buildEditableCssRow(el, 'z-index', 'z-index', undefined, 'tt'));
+  grid.append(buildEditableCssRow(el, 'background-color', 'bg', shortColor, 'tt'));
+  grid.append(buildEditableCssRow(el, 'color', 'color', shortColor, 'tt'));
+  // Read-only composite font display
   grid.append(buildKv('font', `${cs.fontSize} / ${parseInt(cs.fontWeight, 10)}`));
+  // Add-property row
+  grid.append(buildAddCssRow(el, 'tt'));
   body.append(grid);
+
+  // Spacing source classes (Tailwind p-*, m-* patterns)
+  const spacingClasses = (el.getAttribute('class') ?? '')
+    .split(/\s+/)
+    .filter((c) => {
+      const base = c.replace(/^[a-z0-9-]+:/, '');
+      return /^-?(?:(?:p|m)(?:[xytrbl])?|space-[xy]|gap(?:-[xy])?)-/.test(base);
+    });
+  if (spacingClasses.length > 0) {
+    const spacingHead = document.createElement('div');
+    spacingHead.className = 'tt-section-h';
+    spacingHead.textContent = `Spacing classes · ${spacingClasses.length}`;
+    body.append(spacingHead);
+    const chips = document.createElement('div');
+    chips.className = 'tt-spacing-chips';
+    for (const c of spacingClasses) {
+      const chip = document.createElement('span');
+      chip.className = 'tt-spacing-chip';
+      chip.textContent = c;
+      chips.append(chip);
+    }
+    body.append(chips);
+  }
 
   const classes = (p.className || '').split(/\s+/).filter(Boolean);
   if (classes.length > 0) {

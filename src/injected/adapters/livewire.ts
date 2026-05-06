@@ -191,6 +191,7 @@ function ownerChain(root: Element, max = 10): OwnerInfo[] {
         name: shortClassName(fqn),
         kind: 'options',
         source: classToFilePath(fqn ?? ''),
+        fiberId: registerRoot(cur),
       });
     }
     cur = cur.parentElement;

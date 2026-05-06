@@ -314,6 +314,7 @@ export const preactAdapter: FrameworkAdapter = {
         name: getComponentName(v.type),
         kind: getComponentKind(v.type),
         source: sourceOf(v),
+        fiberId: registerVNode(v),
       })),
       parent: parentVNode ? vnodeToRef(parentVNode) : null,
       children: childVNodes.map(vnodeToRef),

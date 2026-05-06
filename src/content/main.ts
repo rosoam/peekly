@@ -103,6 +103,25 @@ label.className = 'label';
 highlight.append(label);
 shadow.append(highlight);
 
+// Box model overlay — visualises content area (purple) and margin wings (orange).
+const boxModelLayer = document.createElement('div');
+boxModelLayer.className = 'bm-layer';
+function makeBmEl(cls: string): [HTMLElement, HTMLElement] {
+  const el = document.createElement('div');
+  el.className = cls;
+  const lbl = document.createElement('span');
+  lbl.className = 'bm-label';
+  el.append(lbl);
+  return [el, lbl];
+}
+const [bmContent, bmContentLabel] = makeBmEl('bm-content');
+const [bmMarginTop, bmMarginTopLabel] = makeBmEl('bm-margin');
+const [bmMarginRight, bmMarginRightLabel] = makeBmEl('bm-margin');
+const [bmMarginBottom, bmMarginBottomLabel] = makeBmEl('bm-margin');
+const [bmMarginLeft, bmMarginLeftLabel] = makeBmEl('bm-margin');
+boxModelLayer.append(bmContent, bmMarginTop, bmMarginRight, bmMarginBottom, bmMarginLeft);
+shadow.append(boxModelLayer);
+
 // Container for "highlight all instances" multi-overlay.
 const instancesLayer = document.createElement('div');
 instancesLayer.className = 'instances-layer';
@@ -180,9 +199,103 @@ function attachHost(): void {
   }
 }
 
+function showBoxModel(el: Element): void {
+  if (!(el instanceof HTMLElement)) { clearBoxModel(); return; }
+  const cs = window.getComputedStyle(el);
+  const r = el.getBoundingClientRect();
+
+  const pt = parseFloat(cs.paddingTop) || 0;
+  const pr = parseFloat(cs.paddingRight) || 0;
+  const pb = parseFloat(cs.paddingBottom) || 0;
+  const pl = parseFloat(cs.paddingLeft) || 0;
+  const mt = parseFloat(cs.marginTop) || 0;
+  const mr = parseFloat(cs.marginRight) || 0;
+  const mb = parseFloat(cs.marginBottom) || 0;
+  const ml = parseFloat(cs.marginLeft) || 0;
+  const bt = parseFloat(cs.borderTopWidth) || 0;
+  const br_w = parseFloat(cs.borderRightWidth) || 0;
+  const bb = parseFloat(cs.borderBottomWidth) || 0;
+  const bl = parseFloat(cs.borderLeftWidth) || 0;
+
+  const classes = (el.getAttribute('class') ?? '').split(/\s+/).filter(Boolean);
+
+  // Find the most specific Tailwind class responsible for a given margin/padding side.
+  function sideClass(side: 't' | 'r' | 'b' | 'l', prop: 'p' | 'm'): string | null {
+    const axis = (side === 't' || side === 'b') ? 'y' : 'x';
+    for (const prefix of [`${prop}${side}-`, `${prop}${axis}-`, `${prop}-`]) {
+      const found = classes.find((c) => {
+        const base = c.replace(/^[a-z0-9-]+:/, '');
+        return base.startsWith(prefix) || base.startsWith(`-${prefix}`);
+      });
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function applyWing(
+    wingEl: HTMLElement, lbl: HTMLElement,
+    x: number, y: number, w: number, h: number,
+    text: string,
+  ): void {
+    if (w > 0 && h > 0) {
+      wingEl.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;display:block`;
+      lbl.textContent = (w >= 16 && h >= 12) ? text : '';
+    } else {
+      wingEl.style.display = 'none';
+      lbl.textContent = '';
+    }
+  }
+
+  // Content box: sits inside border + padding edges.
+  const cw = r.width - bl - br_w - pl - pr;
+  const ch = r.height - bt - bb - pt - pb;
+  if (cw > 0 && ch > 0 && (pt > 0 || pr > 0 || pb > 0 || pl > 0)) {
+    bmContent.style.cssText = `left:${r.left + bl + pl}px;top:${r.top + bt + pt}px;width:${cw}px;height:${ch}px;display:block`;
+    if (cw >= 16 && ch >= 12) {
+      // Prefer a single generic `p-*` class; fall back to computed shorthand.
+      const padCls = classes.find((c) => /^(?:[a-z0-9-]+:)?-?p-/.test(c));
+      if (padCls) {
+        bmContentLabel.textContent = padCls;
+      } else {
+        const vals = [pt, pr, pb, pl].map((v) => `${Math.round(v)}px`);
+        if (vals[0] === vals[1] && vals[1] === vals[2] && vals[2] === vals[3]) {
+          bmContentLabel.textContent = vals[0]!;
+        } else if (vals[0] === vals[2] && vals[1] === vals[3]) {
+          bmContentLabel.textContent = `${vals[0]} ${vals[1]}`;
+        } else {
+          bmContentLabel.textContent = `${vals[0]} ${vals[1]} ${vals[2]} ${vals[3]}`;
+        }
+      }
+    } else {
+      bmContentLabel.textContent = '';
+    }
+  } else {
+    bmContent.style.display = 'none';
+    bmContentLabel.textContent = '';
+  }
+
+  applyWing(bmMarginTop, bmMarginTopLabel, r.left, r.top - mt, r.width, mt,
+    sideClass('t', 'm') ?? `${Math.round(mt)}px`);
+  applyWing(bmMarginBottom, bmMarginBottomLabel, r.left, r.bottom, r.width, mb,
+    sideClass('b', 'm') ?? `${Math.round(mb)}px`);
+  applyWing(bmMarginLeft, bmMarginLeftLabel, r.left - ml, r.top - mt, ml, r.height + mt + mb,
+    sideClass('l', 'm') ?? `${Math.round(ml)}px`);
+  applyWing(bmMarginRight, bmMarginRightLabel, r.right, r.top - mt, mr, r.height + mt + mb,
+    sideClass('r', 'm') ?? `${Math.round(mr)}px`);
+}
+
+function clearBoxModel(): void {
+  bmContent.style.display = 'none';
+  bmMarginTop.style.display = 'none';
+  bmMarginRight.style.display = 'none';
+  bmMarginBottom.style.display = 'none';
+  bmMarginLeft.style.display = 'none';
+}
+
 function setHighlightFromRect(rect: Rect | null, labelText: string | null, altIsDown: boolean): void {
   if (!rect || !altIsDown || !isPickerEnabled()) {
     highlight.style.display = 'none';
+    clearBoxModel();
     return;
   }
   highlight.style.display = 'block';
@@ -196,6 +309,7 @@ function setHighlightFromRect(rect: Rect | null, labelText: string | null, altIs
 
 function clearHighlight(): void {
   highlight.style.display = 'none';
+  clearBoxModel();
   state.hoverEl = null;
 }
 
@@ -701,6 +815,8 @@ let tooltipTargetEl: Element | null = null;
 // Modifier-key state. Hold X or Y to activate the component picker (hover + tooltip).
 // Click while held to open the full inspector panel.
 let xDown = false;
+// Right-click while holding X dismisses the tooltip until the next right-click.
+let tooltipDismissed = false;
 
 function isEditingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
@@ -733,9 +849,10 @@ function handleMouseMove(ev: MouseEvent): void {
   }
   state.hoverEl = el;
   scheduleHover(el, true);
+  showBoxModel(el);
 
-  // Tooltip follows the cursor whenever X is held.
-  if (el !== tooltipTargetEl) {
+  // Tooltip follows the cursor whenever X is held, unless dismissed by right-click.
+  if (!tooltipDismissed && el !== tooltipTargetEl) {
     tooltipTargetEl = el;
     tooltip.setVisible(true);
     tooltip.update({
@@ -797,6 +914,18 @@ function handleAuxClick(ev: MouseEvent): void {
   }
 }
 
+function handleContextMenu(ev: MouseEvent): void {
+  if (!isPickerEnabled() || !xDown) return;
+  if (isInsideHost(ev.target)) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  tooltipDismissed = !tooltipDismissed;
+  tooltipTargetEl = null;
+  if (tooltipDismissed) {
+    tooltip.hide();
+  }
+}
+
 function handleKeyDown(ev: KeyboardEvent): void {
   if (ev.key === 'Escape') {
     clearPanel();
@@ -813,7 +942,7 @@ function handleKeyDown(ev: KeyboardEvent): void {
 
   // Network panel toggle works regardless of picker enabled state.
   if (!isEditingEvent(ev) && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
-    if (ev.key.toLowerCase() === 'y' && !ev.repeat) {
+    if ((ev.key.toLowerCase() === 'y' || ev.code === 'KeyY') && !ev.repeat) {
       if (!state.netPanelHandle?.isInputFocused()) {
         toggleNetPanel();
         return;
@@ -827,7 +956,7 @@ function handleKeyDown(ev: KeyboardEvent): void {
   // Don't fight native browser/OS shortcuts (e.g. Cmd+X, Ctrl+X).
   if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
 
-  if (ev.key.toLowerCase() === 'x' && !xDown) {
+  if ((ev.key.toLowerCase() === 'x' || ev.code === 'KeyX') && !xDown) {
     // Unpin any previously-pinned tooltip so it resumes following the cursor.
     if (tooltip.isPinned()) tooltip.setPinned(false);
     xDown = true;
@@ -860,7 +989,7 @@ function toggleNetPanel(): void {
 }
 
 function handleKeyUp(ev: KeyboardEvent): void {
-  if (ev.key.toLowerCase() === 'x') {
+  if (ev.key.toLowerCase() === 'x' || ev.code === 'KeyX') {
     xDown = false;
     clearHighlight();
     if (tooltipTargetEl) {
@@ -1007,11 +1136,22 @@ function init(): void {
   window.addEventListener('click', handleClick, true);
   window.addEventListener('click', handleClickAnywhere);
   window.addEventListener('auxclick', handleAuxClick, true);
+  window.addEventListener('contextmenu', handleContextMenu, true);
   window.addEventListener('keydown', handleKeyDown, true);
   window.addEventListener('keyup', handleKeyUp, true);
   window.addEventListener('blur', handleBlur);
   window.addEventListener('message', handleBridgeMessage);
   window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      xDown = false;
+      clearHighlight();
+      if (!tooltip.isPinned()) {
+        tooltip.hide();
+        tooltipTargetEl = null;
+      }
+    }
+  });
 
   void loadSettings();
   watchSettings();

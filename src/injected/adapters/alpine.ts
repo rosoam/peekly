@@ -207,7 +207,12 @@ function ownerChain(root: Element, max = 10): OwnerInfo[] {
   let cur: Element | null = root.parentElement;
   while (cur && chain.length < max) {
     if (isAlpineRoot(cur)) {
-      chain.push({ name: deriveScopeName(cur), kind: 'options', source: null });
+      chain.push({
+        name: deriveScopeName(cur),
+        kind: 'options',
+        source: null,
+        fiberId: registerElement(cur),
+      });
     }
     cur = cur.parentElement;
   }

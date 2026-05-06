@@ -190,7 +190,12 @@ function ownerChain(el: Element, max = 10): OwnerInfo[] {
   let cur: Element | null = el.parentElement;
   while (cur && chain.length < max) {
     if (isCustomElement(cur)) {
-      chain.push({ name: getDisplayName(cur), kind: getKind(cur), source: null });
+      chain.push({
+        name: getDisplayName(cur),
+        kind: getKind(cur),
+        source: null,
+        fiberId: registerElement(cur),
+      });
     }
     cur = cur.parentElement;
   }
