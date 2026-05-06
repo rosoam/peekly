@@ -4,7 +4,7 @@ import { crx, defineManifest } from '@crxjs/vite-plugin';
 const manifest = defineManifest({
   manifest_version: 3,
   name: 'Peekly',
-  version: '0.3.0',
+  version: '0.4.0',
   description:
     'Hold x to inspect any component, DOM element, or CSS. Press y for the Network Inspector — fast, seamless, on any site.',
   homepage_url: 'https://github.com/rosoam/peekly',

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-06
+
 ### Added
 
 - **Network Inspector** (`y` to toggle) — a floating draggable panel that captures every `fetch` and `XMLHttpRequest` call made by the page in real time, without any proxy or DevTools Protocol required. The capture runs entirely in the MAIN world by patching `window.fetch` and `window.XMLHttpRequest`; captured entries travel over `postMessage` to the isolated-world store before being displayed.
@@ -148,3 +150,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.1.0]: https://github.com/rosoam/peekly/releases/tag/v0.1.0
 [0.2.0]: https://github.com/rosoam/peekly/releases/tag/v0.2.0
 [0.3.0]: https://github.com/rosoam/peekly/releases/tag/v0.3.0
+[0.4.0]: https://github.com/rosoam/peekly/releases/tag/v0.4.0
