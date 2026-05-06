@@ -1,4 +1,4 @@
-# Project state — 2026-05-03 (updated)
+# Project state — 2026-05-06 (v0.4.0 released)
 
 A live snapshot of where Peekly is, what's saved, what's pending, and how to pick it back up. Read this first when resuming.
 
@@ -33,6 +33,7 @@ A live snapshot of where Peekly is, what's saved, what's pending, and how to pic
 │   ├── ARCHITECTURE.md
 │   ├── MULTI_FRAMEWORK_AUDIT.md
 │   ├── CHROME_WEB_STORE.md
+│   ├── SPRINT_LOG.md
 │   └── PROJECT_STATE.md      # ← this file
 └── README, CHANGELOG, LICENSE, SECURITY, PRIVACY, CONTRIBUTING, RELEASING
 ```
@@ -40,15 +41,22 @@ A live snapshot of where Peekly is, what's saved, what's pending, and how to pic
 ## Git state
 
 ```
-HEAD (main, 4 commits ahead of origin/main)
-  e2e9ef1  feat(n1-dialog): richer N+1 overlay with stats, severity, and Copy all
-  7963591  feat: call stack in debug bundle + copy-all button; remove smart labels from Overview
-  d87a044  feat: scroll isolation + call stack in network requests
-  8c251be  feat(v0.4.0): Network Inspector + key binding refactor + tooltip improvements
-  f233515  docs: align README and docs with v0.3.0 sticky-tooltip behavior   ← origin/main
+HEAD (main = origin/main) — working tree clean
+  4a10943  chore(release): v0.4.0          ← tag v0.4.0, origin/main
+  a3f12bc  feat: Network Inspector v1, multi-framework improvements, box-model UX fixes
+  ...
 ```
 
-Working tree is **clean**. All changes committed. Nothing unpushed except the 4 commits above.
+Working tree is **clean**. main and origin/main are in sync. Tag `v0.4.0` pushed.
+
+## Release status
+
+| Version | Date | GitHub Release | Chrome Web Store |
+|---------|------|---------------|-----------------|
+| v0.4.0 | 2026-05-06 | ✅ créé par CI | ⏳ en attente review CWS |
+| v0.3.0 | 2026-05-01 | ✅ | ✅ publique |
+
+**CWS auto-publish pipeline** : opérationnel depuis v0.4.0. Les 4 secrets sont configurés dans GitHub Actions (environment secrets → `CWS_EXTENSION_ID`). Le workflow `release.yml` déclenchera la publication automatique à chaque tag `v*`.
 
 ## Key bindings (current)
 
@@ -56,26 +64,23 @@ Working tree is **clean**. All changes committed. Nothing unpushed except the 4 
 |-----|--------|
 | Hold `x`, hover | Component picker — indigo highlight + sticky contextual tooltip |
 | `x` + click | Open full inspector panel (source, props, CSS, A11y, re-render counter) |
+| Right-click (hold `x`) | Toggle tooltip dismiss — cache le tooltip pour inspecter le box-model |
 | `y` | Toggle Network Inspector panel |
 | `Esc` | Close all overlays (tooltip, panel, network panel) |
 
 Active only when not typing in a form field and no real modifier (Cmd/Ctrl/Alt) is held.
 
-## What shipped since v0.3.0
-
-### v0.4.0 (committed 2026-05-03)
+## What shipped in v0.4.0 (2026-05-06)
 
 - **Network Inspector** (`y` toggle) — floating draggable panel capturing every `fetch` and `XHR` call in real time. Request list, filter bar, detail tabs (Overview / Request / Response / TypeScript / GraphQL), copy buttons in every tab, footer badges (errors / slow / N+1 / drift / anomaly), request chart overlay (scatter plot + waterfall), Related Requests section.
 - **Tooltip DOM tab improvements** — Copy HTML + Copy classes button group; attributes table with per-attribute copy.
 - **Key binding simplification** — `x` alone does everything for the component picker; `y` is exclusively the Network Inspector toggle.
-
-### Post-v0.4.0 (unreleased, committed)
-
-- **Call stack capture** — `getStackInfo()` in `capture.ts` attaches up to 12 user-land call frames to every request (webpack internals filtered). Displayed in Overview tab with per-frame + copy-all buttons. Included in the per-request debug bundle.
-- **Selected row highlight** — focused request in the list has a stronger indigo left border + background.
-- **Scroll isolation** — tooltip body and Network Inspector panel trap scroll (`overscroll-behavior: contain` + `wheel stopPropagation`).
-- **N+1 dialog overhaul** — stats row per pattern (avg/total duration, first/last seen); computed burst window; severity tiers (moderate/high/critical) with colour coding and actionable hints; **Copy all** button exporting a full N+1 debug bundle.
-- **Removed smart labels** from the Overview tab (still shown in request list column).
+- **Call stack capture** — up to 12 user-land frames per request (internals filtered). Displayed in Overview tab with per-frame + copy-all buttons.
+- **N+1 dialog overhaul** — stats row per pattern (avg/total duration, first/last seen); computed burst window; severity tiers (moderate/high/critical); **Copy all** button.
+- **Scroll isolation** — tooltip body and Network Inspector panel trap scroll.
+- **Right-click dismiss** — right-click pendant hold-`x` toggle le tooltip off pour voir le box-model overlay sans obstruction. State persiste entre keyup/keydown.
+- **Box-model overlay labels** — les labels px dans les zones padding/margin ont maintenant un badge fond sombre — lisibles sur toute couleur d'élément.
+- **Removed smart labels** from Overview tab (still in request list column).
 
 ## Backlog (ordered)
 
@@ -93,10 +98,9 @@ Active only when not typing in a form field and no real modifier (Cmd/Ctrl/Alt) 
 
 ### Screenshot automation script
 
-`scripts/screenshots.ts` is committed but **not working end-to-end**. The demo app (`demo/`) is fully functional for manual screenshots. The blocker:
+`scripts/screenshots.ts` est committé mais **non fonctionnel** end-to-end. Le demo app (`demo/`) est pleinement fonctionnel pour les screenshots manuels. Le blocker :
 
-- Playwright's `launchPersistentContext` with `--load-extension` does not load MV3 extensions when driving Chrome (Chrome silently ignores the flag).
-- Workaround attempted: launch Chrome ourselves with the right flags, attach via `connectOverCDP` — stalls at 30s.
+- Playwright's `launchPersistentContext` avec `--load-extension` ne charge pas les extensions MV3 (Chrome ignore silencieusement le flag).
 
 **Manual screenshot workflow:**
 ```bash
@@ -106,11 +110,7 @@ bun run demo:dev    # serves http://localhost:5173
 # Hold x to inspect, press y for Network Inspector, capture with Cmd+Shift+4
 ```
 
-Five screenshots needed (1280×800 PNG) — see `docs/CHROME_WEB_STORE.md` for subjects.
-
-### Push to GitHub
-
-4 commits ahead of `origin/main`. Push is gated by a `push-guard` hook requiring manual invocation.
+Cinq screenshots nécessaires (1280×800 PNG) — voir `docs/CHROME_WEB_STORE.md`.
 
 ## How to pick this up
 
@@ -127,6 +127,25 @@ bun run build
 
 # Demo
 bun run demo:dev    # http://localhost:5173
+```
+
+## Release workflow
+
+```bash
+# 1. Committer tous les changements
+git add -A && git commit -m "feat: ..."
+
+# 2. Lancer le script (clean tree requis)
+bun run release:patch   # x.y.Z
+bun run release:minor   # x.Y.0
+bun run release:major   # X.0.0
+
+# 3. Pusher (manuellement — push-guard hook)
+git push origin main
+git push origin vX.Y.Z   # déclenche GitHub Actions → CWS auto-publish
+
+# 4. Surveiller CI
+gh run watch
 ```
 
 ## Useful commands
@@ -153,7 +172,8 @@ bun run demo:dev
 | `docs/MULTI_FRAMEWORK_AUDIT.md` | Framework support analysis, adapter design |
 | `docs/CHROME_WEB_STORE.md` | Submission walkthrough with ready-to-paste copy |
 | `docs/PROJECT_STATE.md` | This file — session-level snapshot |
+| `docs/SPRINT_LOG.md` | Logs de tâches non analysées (via /log-peekly) |
 | `SECURITY.md` | Threat model, audit history, vulnerability disclosure |
 | `PRIVACY.md` | Privacy policy (no data leaves the browser) |
 | `CONTRIBUTING.md` | Dev setup, coding standards, manual test plan |
-| `RELEASING.md` | Cutting a release, optional CWS auto-publish setup |
+| `RELEASING.md` | Cutting a release, CWS auto-publish setup |
