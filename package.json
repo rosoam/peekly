@@ -1,6 +1,6 @@
 {
   "name": "peekly",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Hold x to inspect any component, DOM element, or CSS. Press y for the Network Inspector — fast, seamless, on any site.",
   "private": true,
   "type": "module",
