@@ -22,6 +22,7 @@ import type {
 } from '../shared/messages';
 import { initNetworkCapture } from '../net/capture';
 import { alpineAdapter } from './adapters/alpine';
+import { flutterAdapter } from './adapters/flutter';
 import { litAdapter } from './adapters/lit';
 import { livewireAdapter } from './adapters/livewire';
 import { plainDomAdapter } from './adapters/plain-dom';
@@ -48,6 +49,9 @@ const adapters: AdapterChain = [
   vue3Adapter,
   // PHP-side reactive frameworks
   livewireAdapter,
+  // Flutter Web — must run before Lit/web-components because flt-* are custom
+  // elements but their semantic is Flutter-specific (PascalCase widget naming).
+  flutterAdapter,
   // Web Components (native + Lit)
   litAdapter,
   // Lighter behavioral frameworks — tried before Twig because their probes are

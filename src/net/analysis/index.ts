@@ -18,3 +18,9 @@ export type { TokenEntry, CookieEntry } from './jwt';
 export { generateTsInterface } from './typescript-gen';
 export { checkDrift } from './drift';
 export { checkAnomaly } from './anomaly';
+export {
+  detectSensitiveFields,
+  hasSensitiveFields,
+  severityOf,
+} from './sensitive';
+export type { SensitiveFinding, SensitiveCategory } from './sensitive';

@@ -1,5 +1,5 @@
-import type { ComponentPreview, EditorId, SourceLocation } from '../shared/messages';
-import { buildEditableCssRow, buildAddCssRow } from './panel';
+import type { ComponentPreview, SourceLocation } from '../shared/messages';
+import { buildEditableCssRow, buildAddCssRow, selectorOf, buildOpenTag, ICON_COPY_SM } from './panel';
 
 const TOOLTIP_WIDTH = 340;
 const TOOLTIP_OFFSET_X = 16;
@@ -36,19 +36,6 @@ function shortPath(src: SourceLocation): string {
   }
   if (full.length <= 56) return full;
   return '…' + full.slice(-55);
-}
-
-function editorUrl(editor: EditorId, src: SourceLocation): string | null {
-  const path = src.fileName;
-  const line = src.lineNumber ?? 1;
-  const col = src.columnNumber ?? 1;
-  switch (editor) {
-    case 'vscode': return `vscode://file/${path}:${line}:${col}`;
-    case 'cursor': return `cursor://file/${path}:${line}:${col}`;
-    case 'webstorm': return `webstorm://open?file=${encodeURIComponent(path)}&line=${line}&column=${col}`;
-    case 'sublime': return `subl://open?url=${encodeURIComponent(`file://${path}`)}&line=${line}`;
-    case 'none': return null;
-  }
 }
 
 function classifyTwClass(c: string): string {
@@ -146,6 +133,12 @@ function shortColor(v: string): string {
   return a != null && parseFloat(a) < 1 ? `${hex} ·α${parseFloat(a).toFixed(2)}` : hex;
 }
 
+function shortFontFamily(v: string): string {
+  // Take the first font in the stack, strip quotes
+  const first = v.split(',')[0]?.trim() ?? '';
+  return first.replace(/^["']|["']$/g, '');
+}
+
 // ─── Rendering ───────────────────────────────────────────────────────
 
 function renderTabs(host: HTMLElement, available: { id: Tab; label: string; badge?: number }[], onChange: (t: Tab) => void): void {
@@ -171,7 +164,7 @@ function renderTabs(host: HTMLElement, available: { id: Tab; label: string; badg
   }
 }
 
-function renderCompTab(body: HTMLElement, p: ComponentPreview, editor: EditorId): void {
+function renderCompTab(body: HTMLElement, p: ComponentPreview): void {
   body.replaceChildren();
   if (p.kind === 'host') {
     const empty = document.createElement('div');
@@ -193,14 +186,6 @@ function renderCompTab(body: HTMLElement, p: ComponentPreview, editor: EditorId)
     src.className = 'tt-src';
     src.textContent = shortPath(p.source);
     src.title = pathString(p.source);
-    const url = editorUrl(editor, p.source);
-    if (url) {
-      src.classList.add('tt-clickable');
-      src.addEventListener('click', (ev) => {
-        ev.stopPropagation();
-        void chrome.runtime.sendMessage({ kind: 'open-editor', url });
-      });
-    }
     body.append(src);
   } else {
     const noSrc = document.createElement('div');
@@ -218,122 +203,6 @@ function renderCompTab(body: HTMLElement, p: ComponentPreview, editor: EditorId)
   if (p.propNames.length > 0) {
     body.append(buildKv('props', `${p.propNames.length}: ${p.propNames.slice(0, 5).join(', ')}${p.propNames.length > 5 ? '…' : ''}`));
   }
-}
-
-function selectorOf(el: Element): string {
-  const tag = el.tagName.toLowerCase();
-  const id = el.id ? `#${el.id}` : '';
-  const className = (el.getAttribute('class') ?? '').trim();
-  let cls = '';
-  if (className) {
-    const parts = className.split(/\s+/).filter(Boolean);
-    const joined = '.' + parts.join('.');
-    cls = joined.length > 28 ? joined.slice(0, 27) + '…' : joined;
-  }
-  return `<${tag}${id}${cls}>`;
-}
-
-function buildOpenTag(el: Element, copyOuterHtml: () => void, onCopy: (text: string) => void): HTMLElement {
-  const wrap = document.createElement('div');
-  wrap.className = 'tt-html';
-
-  const head = document.createElement('div');
-  head.className = 'tt-html-head';
-
-  const lt = document.createElement('span');
-  lt.className = 'tt-html-bracket';
-  lt.textContent = '<';
-
-  const tagName = document.createElement('span');
-  tagName.className = 'tt-html-tag';
-  tagName.textContent = el.tagName.toLowerCase();
-
-  head.append(lt, tagName);
-
-  const attrs = Array.from(el.attributes);
-  if (attrs.length === 0) {
-    const close = document.createElement('span');
-    close.className = 'tt-html-bracket';
-    close.textContent = '>';
-    head.append(close);
-    wrap.append(head);
-  } else {
-    wrap.append(head);
-    const attrsList = document.createElement('div');
-    attrsList.className = 'tt-html-attrs';
-    for (const a of attrs) {
-      attrsList.append(buildAttr(a.name, a.value, onCopy));
-    }
-    wrap.append(attrsList);
-
-    const closeRow = document.createElement('div');
-    closeRow.className = 'tt-html-close';
-    closeRow.textContent = '>';
-    wrap.append(closeRow);
-  }
-
-  // Copy button group (outerHTML + classes) at top-right of the open tag
-  const copyGroup = document.createElement('div');
-  copyGroup.className = 'tt-html-copy-group';
-
-  const classes = (el.getAttribute('class') ?? '').trim();
-  if (classes) {
-    const copyClsBtn = document.createElement('button');
-    copyClsBtn.type = 'button';
-    copyClsBtn.className = 'tt-html-copy';
-    copyClsBtn.title = 'Copy classes';
-    copyClsBtn.textContent = 'Classes';
-    copyClsBtn.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      onCopy(classes);
-    });
-    copyGroup.append(copyClsBtn);
-  }
-
-  const copyBtn = document.createElement('button');
-  copyBtn.type = 'button';
-  copyBtn.className = 'tt-html-copy';
-  copyBtn.title = 'Copy outerHTML';
-  copyBtn.textContent = 'HTML';
-  copyBtn.addEventListener('click', (ev) => {
-    ev.stopPropagation();
-    copyOuterHtml();
-  });
-  copyGroup.append(copyBtn);
-  head.append(copyGroup);
-
-  return wrap;
-}
-
-const ICON_COPY_TT = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
-
-function buildAttr(name: string, value: string, onCopy: (text: string) => void): HTMLElement {
-  const wrap = document.createElement('div');
-  wrap.className = 'tt-html-attr-wrap';
-  const row = document.createElement('div');
-  row.className = 'tt-html-attr';
-  const k = document.createElement('span');
-  k.className = 'tt-html-attr-name';
-  k.textContent = name;
-  const eq = document.createElement('span');
-  eq.className = 'tt-html-attr-eq';
-  eq.textContent = '=';
-  const v = document.createElement('span');
-  v.className = 'tt-html-attr-value';
-  v.textContent = value;
-  v.title = value;
-  row.append(k, eq, v);
-  const copyBtn = document.createElement('button');
-  copyBtn.type = 'button';
-  copyBtn.className = 'tt-row-copy';
-  copyBtn.title = `Copy ${name}`;
-  copyBtn.innerHTML = ICON_COPY_TT;
-  copyBtn.addEventListener('click', (ev) => {
-    ev.stopPropagation();
-    onCopy(value);
-  });
-  wrap.append(row, copyBtn);
-  return wrap;
 }
 
 function buildChildRow(child: Element, onNavigate: (el: Element) => void, onPreview: (el: Element | null) => void): HTMLElement {
@@ -426,7 +295,7 @@ function renderDomTab(
       copyBtn.type = 'button';
       copyBtn.className = 'tt-row-copy';
       copyBtn.title = `Copy ${a.name}`;
-      copyBtn.innerHTML = ICON_COPY_TT;
+      copyBtn.innerHTML = ICON_COPY_SM;
       const val = a.value;
       copyBtn.addEventListener('click', (ev) => {
         ev.stopPropagation();
@@ -479,7 +348,7 @@ function renderDomTab(
   body.append(closeTag);
 }
 
-function renderCssTab(body: HTMLElement, p: ComponentPreview, el: Element | null): void {
+function renderCssTab(body: HTMLElement, p: ComponentPreview, el: Element | null, onCopy: (text: string) => void): void {
   body.replaceChildren();
   if (!el || !(el instanceof HTMLElement)) {
     const empty = document.createElement('div');
@@ -497,14 +366,17 @@ function renderCssTab(body: HTMLElement, p: ComponentPreview, el: Element | null
   grid.append(buildEditableCssRow(el, 'display', 'display', undefined, 'tt'));
   grid.append(buildEditableCssRow(el, 'position', 'position', undefined, 'tt'));
   // Read-only composite (size = bounding rect)
-  grid.append(buildKv('size', `${Math.round(r.width)}×${Math.round(r.height)}`));
-  grid.append(buildKv('margin', cssShorthand(cs, 'margin')));
-  grid.append(buildKv('padding', cssShorthand(cs, 'padding')));
+  grid.append(buildKv('size', `${Math.round(r.width)}×${Math.round(r.height)}`, onCopy));
+  grid.append(buildKv('margin', cssShorthand(cs, 'margin'), onCopy));
+  grid.append(buildKv('padding', cssShorthand(cs, 'padding'), onCopy));
   grid.append(buildEditableCssRow(el, 'z-index', 'z-index', undefined, 'tt'));
   grid.append(buildEditableCssRow(el, 'background-color', 'bg', shortColor, 'tt'));
   grid.append(buildEditableCssRow(el, 'color', 'color', shortColor, 'tt'));
-  // Read-only composite font display
-  grid.append(buildKv('font', `${cs.fontSize} / ${parseInt(cs.fontWeight, 10)}`));
+  // Font: split into distinct rows for readability
+  grid.append(buildKv('font-size', cs.fontSize, onCopy));
+  grid.append(buildKv('line-height', cs.lineHeight, onCopy));
+  grid.append(buildKv('font-weight', cs.fontWeight, onCopy));
+  grid.append(buildKv('font-family', shortFontFamily(cs.fontFamily), onCopy));
   // Add-property row
   grid.append(buildAddCssRow(el, 'tt'));
   body.append(grid);
@@ -596,7 +468,7 @@ function renderA11yTab(body: HTMLElement, el: Element | null): void {
   }
 }
 
-function buildKv(label: string, value: string): HTMLElement {
+function buildKv(label: string, value: string, onCopy?: (text: string) => void): HTMLElement {
   const row = document.createElement('div');
   row.className = 'tt-kv';
   const k = document.createElement('span');
@@ -607,6 +479,18 @@ function buildKv(label: string, value: string): HTMLElement {
   v.textContent = value;
   v.title = value;
   row.append(k, v);
+  if (onCopy) {
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'tt-row-copy';
+    copyBtn.title = `Copy ${label}`;
+    copyBtn.innerHTML = ICON_COPY_SM;
+    copyBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      onCopy(value);
+    });
+    row.append(copyBtn);
+  }
   return row;
 }
 
@@ -635,7 +519,6 @@ function positionTooltip(el: HTMLElement, anchor: { x: number; y: number }): voi
 // ─── Public factory ──────────────────────────────────────────────────
 
 export type CreateTooltipOptions = {
-  getEditor: () => EditorId;
   onNavigateToElement: (el: Element) => void;
   onPreviewElement: (el: Element | null) => void;
   onCopyText: (text: string) => void;
@@ -645,7 +528,7 @@ export function createTooltip(
   shadow: ShadowRoot,
   opts: CreateTooltipOptions,
 ): TooltipState {
-  const { getEditor, onNavigateToElement, onPreviewElement, onCopyText } = opts;
+  const { onNavigateToElement, onPreviewElement, onCopyText } = opts;
   const el = document.createElement('div');
   el.className = 'tooltip';
   el.style.display = 'none';
@@ -701,13 +584,13 @@ export function createTooltip(
 
     switch (activeTab) {
       case 'comp':
-        renderCompTab(body, lastPreview, getEditor());
+        renderCompTab(body, lastPreview);
         break;
       case 'dom':
         renderDomTab(body, lastPreview, lastEl, onNavigateToElement, onPreviewElement, onCopyText);
         break;
       case 'css':
-        renderCssTab(body, lastPreview, lastEl);
+        renderCssTab(body, lastPreview, lastEl, onCopyText);
         break;
       case 'a11y':
         renderA11yTab(body, lastEl);

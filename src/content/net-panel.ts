@@ -7,6 +7,19 @@ import type { TokenEntry, CookieEntry } from '../net/analysis/jwt';
 import { generateTsInterface } from '../net/analysis/typescript-gen';
 import { checkDrift } from '../net/analysis/drift';
 import { checkAnomaly } from '../net/analysis/anomaly';
+import { detectSensitiveFields, severityOf } from '../net/analysis/sensitive';
+import type { SensitiveFinding, SensitiveCategory } from '../net/analysis/sensitive';
+
+// Memoize findings per request id — detection walks JSON, called from buildRow
+// and updateStatusBar; we don't want to re-walk the same payload twice per tick.
+const sensitiveCache = new Map<string, SensitiveFinding[]>();
+function getSensitive(r: RequestEntry): SensitiveFinding[] {
+  const cached = sensitiveCache.get(r.id);
+  if (cached) return cached;
+  const found = detectSensitiveFields(r);
+  sensitiveCache.set(r.id, found);
+  return found;
+}
 import { netPanelCss } from './net-styles';
 
 // ─── Types ──────────────────────────────────────────────────────────
@@ -516,12 +529,15 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
   const sbTiming = makeEl('span', 'np-sb-timing', 'avg — · p95 —');
   const sbN1 = makeEl('span', 'np-sb-n1 np-sb-badge hidden', 'N+1 ⚠ 0');
   const sbErrs = makeEl('span', 'np-sb-errs np-sb-badge hidden', 'Errors ⚠ 0');
+  const sbSensitive = makeEl('span', 'np-sb-sens np-sb-badge hidden', '🛡 0');
+  sbSensitive.title = 'View requests with sensitive fields';
   const sbSpark = makeEl('div', 'np-sb-spark');
   sbSpark.title = 'View request chart';
   statusBar.appendChild(sbTotal);
   statusBar.appendChild(sbTiming);
   statusBar.appendChild(sbN1);
   statusBar.appendChild(sbErrs);
+  statusBar.appendChild(sbSensitive);
   const sbSpacer = makeEl('span', 'np-sb-spacer');
   statusBar.appendChild(sbSpacer);
   statusBar.appendChild(sbSpark);
@@ -572,6 +588,7 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
 
   sbN1.addEventListener('click', () => openN1Overlay());
   sbErrs.addEventListener('click', () => openErrorsOverlay());
+  sbSensitive.addEventListener('click', () => openSensitiveOverlay());
   sbSpark.addEventListener('click', () => openChartOverlay());
 
   // Assign destroy after all closures below are initialized.
@@ -716,6 +733,17 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
     pathwrap.appendChild(makeEl('div', 'np-rr-path', r.path + (r.query ? `?${r.query}` : '')));
     const label = smartLabel(r.method, r.path);
     if (label) pathwrap.appendChild(makeEl('span', 'np-rr-smart-label', label));
+    const sensitive = getSensitive(r);
+    if (sensitive.length > 0) {
+      const sev = severityOf(sensitive);
+      const badge = makeEl(
+        'span',
+        `np-rr-sensitive np-sens-${sev ?? 'pii-medium'}`,
+        `🛡 ${sensitive.length}`,
+      );
+      badge.title = `${sensitive.length} sensitive field${sensitive.length > 1 ? 's' : ''} detected`;
+      pathwrap.appendChild(badge);
+    }
     row.appendChild(pathwrap);
 
     row.appendChild(makeEl('span', `np-rr-status ${statusClass(r.status)}`, r.status ? String(r.status) : '—'));
@@ -845,6 +873,19 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
       sbErrs.classList.remove('hidden');
     } else {
       sbErrs.classList.add('hidden');
+    }
+
+    // Evict cache for requests no longer in the store (clearAll, ring buffer drop).
+    const liveIds = new Set(reqs.map((r) => r.id));
+    for (const id of sensitiveCache.keys()) {
+      if (!liveIds.has(id)) sensitiveCache.delete(id);
+    }
+    const sensCount = reqs.reduce((s, r) => s + (getSensitive(r).length > 0 ? 1 : 0), 0);
+    if (sensCount > 0) {
+      sbSensitive.textContent = `🛡 ${sensCount}`;
+      sbSensitive.classList.remove('hidden');
+    } else {
+      sbSensitive.classList.add('hidden');
     }
 
     renderSparkline(sbSpark, reqs.slice(-60));
@@ -1467,6 +1508,338 @@ export function renderNetPanel(shadow: ShadowRoot, opts: RenderOpts): NetPanelHa
         body.appendChild(group);
       }
     });
+  }
+
+  function flashCopied(btn: HTMLElement, original: string): void {
+    btn.classList.add('copied');
+    btn.textContent = '✓ Copied';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.textContent = original;
+    }, 1300);
+  }
+
+  // Shared explanatory blocks — written so the report makes sense pasted into
+  // an AI chat without prior context.
+  const SENSITIVE_METHODOLOGY = [
+    '## How this was detected',
+    '',
+    'Peekly is a Chrome extension that captures the live network traffic of the page',
+    'I am currently inspecting (XHR + fetch, request and response bodies). It then',
+    'walks each JSON payload and flags **field names** that look like personal,',
+    'financial, or authentication data.',
+    '',
+    'Detection is **key-name based only** (no value heuristics, no regex on values),',
+    'so:',
+    '- False positives exist (e.g. a field literally named `email` that holds a',
+    '  marketing template name).',
+    '- False negatives also exist (e.g. a custom field name like `usr_id_pii` that',
+    '  the patterns do not recognise).',
+    '- Names are normalised before matching (`user_email`, `userEmail`,',
+    '  `User-Email` all collapse to `useremail`).',
+    '',
+    '## Categories',
+    '',
+    '- **auth** — credentials, tokens, secrets, session keys, JWTs, API keys.',
+    '- **financial** — card numbers, IBAN, routing/account numbers, CVV, expiry.',
+    '- **pii-high** — regulated identifiers: SSN, passport, national ID, medical,',
+    '  precise geolocation.',
+    '- **pii-medium** — contact + low-entropy identifiers: email, phone, address,',
+    '  DOB, full name, IP.',
+    '',
+    'Severity ordering (highest first): `auth` > `financial` > `pii-high` >',
+    '`pii-medium`.',
+    '',
+    '## Value previews',
+    '',
+    'Each finding shows a truncated preview (max 24 chars + `…`). The preview is',
+    'there to disambiguate (e.g. distinguish a real email from a placeholder), it',
+    'is **not** a full leak of the value. Do not treat the preview as authoritative',
+    'for compliance decisions — re-check the actual response.',
+  ].join('\n');
+
+  const SENSITIVE_AI_PROMPT_GLOBAL = [
+    '## What I want help with',
+    '',
+    'Review the findings below and tell me:',
+    '',
+    '1. Which findings look like **real leaks** vs probable false positives, given',
+    '   the endpoint path and the preview value.',
+    '2. Which fields are **unexpected** in a response body for this kind of',
+    '   endpoint (e.g. an auth token returned by a public listing endpoint).',
+    '3. Concrete remediation suggestions: redact in the API, narrow the response',
+    '   shape, move to a separate authenticated endpoint, etc.',
+    '4. Any **patterns across requests** (same field leaked everywhere, one',
+    '   endpoint over-returning, etc.).',
+    '',
+    'Prioritise by severity (auth > financial > pii-high > pii-medium) and by',
+    'whether the data is exposed to unauthenticated callers.',
+  ].join('\n');
+
+  const SENSITIVE_AI_PROMPT_SINGLE = [
+    '## What I want help with',
+    '',
+    'For this single request, tell me:',
+    '',
+    '1. Whether each flagged field is genuinely sensitive **in this context** or a',
+    '   likely false positive given the endpoint path and the preview value.',
+    '2. Whether the response shape is appropriate for what this endpoint should',
+    '   return (over-fetching? leaking unrelated user data?).',
+    '3. Concrete remediation: which fields to drop, redact, or move to a',
+    '   privileged endpoint.',
+  ].join('\n');
+
+  function buildSensitiveRequestReport(
+    r: RequestEntry,
+    findings: SensitiveFinding[],
+  ): string {
+    const order: SensitiveCategory[] = ['auth', 'financial', 'pii-high', 'pii-medium'];
+    const sev = severityOf(findings) ?? 'pii-medium';
+
+    const lines: string[] = [];
+    lines.push('# Sensitive Fields — Single Request');
+    lines.push('');
+    lines.push(
+      `I captured one network request on **${location.origin}** and Peekly's`,
+    );
+    lines.push(
+      'sensitive-field detector flagged the response (and/or request) body. I am',
+    );
+    lines.push(
+      'sharing this analysis to investigate whether real PII / secrets are being',
+    );
+    lines.push('leaked or whether the matches are false positives.');
+    lines.push('');
+    lines.push(`- **Generated:** ${new Date().toISOString()}`);
+    lines.push(`- **Origin:** ${location.origin}`);
+    lines.push(`- **Highest severity:** ${sev}`);
+    lines.push(`- **Findings:** ${findings.length}`);
+    lines.push('');
+    lines.push(SENSITIVE_METHODOLOGY);
+    lines.push('');
+    lines.push('## The request');
+    lines.push('');
+    lines.push(`- **Method + path:** \`${r.method} ${r.path}${r.query ? `?${r.query}` : ''}\``);
+    lines.push(`- **Host:** ${r.host}`);
+    lines.push(`- **Status:** ${r.status || '—'}`);
+    lines.push(`- **Duration:** ${formatDuration(r.duration)}`);
+    lines.push(`- **Response size:** ${formatBytes(r.responseBodySize)}`);
+    lines.push('');
+    lines.push('## Findings');
+    lines.push('');
+    lines.push('Format: `[source] json.path = preview`. `source` is whether the');
+    lines.push('field was found in the request body or the response body.');
+    lines.push('');
+
+    for (const cat of order) {
+      const items = findings.filter((f) => f.category === cat);
+      if (!items.length) continue;
+      lines.push(`### ${cat} (${items.length})`);
+      for (const f of items) {
+        lines.push(`- [${f.source}] \`${f.path || f.key}\` = \`${f.preview}\``);
+      }
+      lines.push('');
+    }
+
+    lines.push(SENSITIVE_AI_PROMPT_SINGLE);
+    return lines.join('\n').trimEnd();
+  }
+
+  function buildSensitiveGlobalReport(
+    flagged: Array<{ r: RequestEntry; findings: SensitiveFinding[] }>,
+  ): string {
+    const order: SensitiveCategory[] = ['auth', 'financial', 'pii-high', 'pii-medium'];
+    const totals: Record<SensitiveCategory, number> = {
+      auth: 0, financial: 0, 'pii-high': 0, 'pii-medium': 0,
+    };
+    for (const { findings } of flagged) {
+      for (const f of findings) totals[f.category] += 1;
+    }
+    const totalFindings = order.reduce((s, c) => s + totals[c], 0);
+    const breakdown = order
+      .filter((c) => totals[c] > 0)
+      .map((c) => `${c}=${totals[c]}`)
+      .join(' · ');
+
+    const lines: string[] = [];
+    lines.push('# Sensitive Fields — Network Analysis');
+    lines.push('');
+    lines.push(
+      `I captured the network traffic of **${location.origin}** in my browser and`,
+    );
+    lines.push(
+      "Peekly's sensitive-field detector flagged the responses below. I want to",
+    );
+    lines.push(
+      'understand whether real PII, credentials, or financial data are being',
+    );
+    lines.push('returned to the client and what to do about it.');
+    lines.push('');
+    lines.push(`- **Generated:** ${new Date().toISOString()}`);
+    lines.push(`- **Origin:** ${location.origin}`);
+    lines.push(
+      `- **Scope:** ${flagged.length} request${flagged.length > 1 ? 's' : ''} flagged out of the captured session`,
+    );
+    lines.push(`- **Total findings:** ${totalFindings}`);
+    if (breakdown) lines.push(`- **Breakdown:** ${breakdown}`);
+    lines.push('');
+    lines.push(SENSITIVE_METHODOLOGY);
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+    lines.push('# Flagged requests');
+    lines.push('');
+    lines.push(
+      'Each section below is one captured request, ordered as they were captured.',
+    );
+    lines.push(
+      'Path is the un-templated URL; status is the HTTP response code.',
+    );
+    lines.push('');
+
+    for (const { r, findings } of flagged) {
+      const sev = severityOf(findings) ?? 'pii-medium';
+      lines.push(`## \`${r.method} ${r.path}${r.query ? `?${r.query}` : ''}\``);
+      lines.push('');
+      lines.push(
+        `- Host: ${r.host} · Status: ${r.status || '—'} · ${formatDuration(r.duration)} · ${formatBytes(r.responseBodySize)}`,
+      );
+      lines.push(`- Severity: ${sev} · Findings: ${findings.length}`);
+      lines.push('');
+      for (const cat of order) {
+        const items = findings.filter((f) => f.category === cat);
+        if (!items.length) continue;
+        lines.push(`**${cat}** (${items.length})`);
+        for (const f of items) {
+          lines.push(`- [${f.source}] \`${f.path || f.key}\` = \`${f.preview}\``);
+        }
+        lines.push('');
+      }
+    }
+
+    lines.push('---');
+    lines.push('');
+    lines.push(SENSITIVE_AI_PROMPT_GLOBAL);
+    return lines.join('\n').trimEnd();
+  }
+
+  function openSensitiveOverlay(): void {
+    const reqs = getState().requests;
+    const flagged = reqs
+      .map((r) => ({ r, findings: getSensitive(r) }))
+      .filter((x) => x.findings.length > 0);
+
+    const copyAllBtn = flagged.length
+      ? makeEl('button', 'np-overlay-head-action', 'Copy all')
+      : undefined;
+
+    openOverlay('Sensitive Fields', (body) => {
+      if (!flagged.length) {
+        body.appendChild(makeEl('div', 'np-intel-empty', 'No sensitive fields detected'));
+        return;
+      }
+
+      body.addEventListener('wheel', (ev) => ev.stopPropagation(), { passive: true });
+
+      // ─── Per-category aggregate ──────────────────────────────
+      const totals: Record<SensitiveCategory, number> = {
+        auth: 0, financial: 0, 'pii-high': 0, 'pii-medium': 0,
+      };
+      for (const { findings } of flagged) {
+        for (const f of findings) totals[f.category] += 1;
+      }
+      const catLabels: Record<SensitiveCategory, string> = {
+        auth: 'Auth / secrets',
+        financial: 'Financial',
+        'pii-high': 'PII (high)',
+        'pii-medium': 'PII (medium)',
+      };
+      const order: SensitiveCategory[] = ['auth', 'financial', 'pii-high', 'pii-medium'];
+      const summary = makeEl('div', 'np-sens-summary');
+      for (const cat of order) {
+        if (totals[cat] === 0) continue;
+        const chip = makeEl('span', `np-sens-chip np-sens-${cat}`,
+          `${catLabels[cat]} · ${totals[cat]}`);
+        summary.appendChild(chip);
+      }
+      body.appendChild(summary);
+
+      // ─── Per-request collapsible groups ──────────────────────
+      for (const { r, findings } of flagged) {
+        const sev = severityOf(findings) ?? 'pii-medium';
+        const group = makeEl('div', 'np-n1-group np-sens-group');
+
+        const epRow = makeEl('div', 'np-n1-ep-row np-sens-ep-row');
+
+        const toggleBtn = makeEl('button', 'np-sens-toggle', '▾');
+        toggleBtn.type = 'button';
+        toggleBtn.title = 'Collapse / expand findings';
+        epRow.appendChild(toggleBtn);
+
+        epRow.appendChild(makeEl('span', `np-method-badge ${methodClass(r.method)}`, r.method));
+
+        const tpl = makeEl('span', 'np-n1-template np-sens-template', r.path);
+        tpl.title = 'Click to open this request';
+        tpl.style.cursor = 'pointer';
+        tpl.addEventListener('click', () => { selectRequest(r.id); closeOverlay(); });
+        epRow.appendChild(tpl);
+
+        epRow.appendChild(
+          makeEl('span', `np-n1-count np-sens-${sev}`,
+            `${findings.length} field${findings.length > 1 ? 's' : ''}`),
+        );
+
+        const copyBtn = makeEl('button', 'np-sens-copy', 'Copy');
+        copyBtn.type = 'button';
+        copyBtn.title = 'Copy this request analysis';
+        copyBtn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          void opts.onCopy(buildSensitiveRequestReport(r, findings));
+          flashCopied(copyBtn, 'Copy');
+        });
+        epRow.appendChild(copyBtn);
+
+        group.appendChild(epRow);
+
+        const fList = makeEl('div', 'np-sens-finding-list');
+        const byCat = new Map<SensitiveCategory, SensitiveFinding[]>();
+        for (const f of findings) {
+          const arr = byCat.get(f.category) ?? [];
+          arr.push(f);
+          byCat.set(f.category, arr);
+        }
+        for (const cat of order) {
+          const items = byCat.get(cat);
+          if (!items) continue;
+          for (const f of items) {
+            const row = makeEl('div', 'np-sens-finding');
+            row.appendChild(makeEl('span', `np-sens-cat-dot np-sens-${cat}`, ''));
+            row.appendChild(makeEl('span', 'np-sens-source', f.source));
+            row.appendChild(makeEl('span', 'np-sens-path', f.path || f.key));
+            row.appendChild(makeEl('span', 'np-sens-preview', f.preview));
+            fList.appendChild(row);
+          }
+        }
+        group.appendChild(fList);
+
+        // Toggle behaviour — default expanded; collapse hides finding list.
+        toggleBtn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const collapsed = group.classList.toggle('collapsed');
+          toggleBtn.textContent = collapsed ? '▸' : '▾';
+        });
+
+        body.appendChild(group);
+      }
+    }, false, copyAllBtn);
+
+    if (copyAllBtn) {
+      copyAllBtn.addEventListener('click', () => {
+        const bundle = buildSensitiveGlobalReport(flagged);
+        void opts.onCopy(bundle);
+        flashCopied(copyAllBtn, 'Copy all');
+      });
+    }
   }
 
   function openChartOverlay(): void {

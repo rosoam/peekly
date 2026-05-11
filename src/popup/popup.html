@@ -74,6 +74,27 @@
         font-size: 11px;
         font-family: inherit;
       }
+      .hotkey-btn {
+        min-width: 56px;
+        background: #1a1a1a;
+        color: #f5f5f5;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 5px;
+        padding: 4px 8px;
+        font-size: 11px;
+        font-family: ui-monospace, monospace;
+        font-weight: 600;
+        cursor: pointer;
+        text-transform: uppercase;
+      }
+      .hotkey-btn:hover {
+        border-color: #6366f1;
+      }
+      .hotkey-btn.capturing {
+        background: #6366f1;
+        color: white;
+        border-color: #6366f1;
+      }
       .hint {
         margin-top: 12px;
         padding: 8px 10px;
@@ -119,16 +140,18 @@
 
     <div class="row">
       <div>
-        <div class="row-label">Editor</div>
-        <div class="row-sub">For "Open in" link</div>
+        <div class="row-label">Inspect hotkey</div>
+        <div class="row-sub">Hold to highlight elements</div>
       </div>
-      <select id="editor">
-        <option value="vscode">VS Code</option>
-        <option value="cursor">Cursor</option>
-        <option value="webstorm">WebStorm</option>
-        <option value="sublime">Sublime</option>
-        <option value="none">None</option>
-      </select>
+      <button id="hotkey-inspect" class="hotkey-btn" type="button" title="Click then press a key">x</button>
+    </div>
+
+    <div class="row">
+      <div>
+        <div class="row-label">Network hotkey</div>
+        <div class="row-sub">Toggle the network panel</div>
+      </div>
+      <button id="hotkey-network" class="hotkey-btn" type="button" title="Click then press a key">y</button>
     </div>
 
     <div class="hint">

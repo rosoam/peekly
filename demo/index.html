@@ -10,12 +10,32 @@
         theme: {
           extend: {
             colors: {
-              brand: { 500: '#6366f1', 600: '#4f46e5', 400: '#818cf8' },
-              ink: { 950: '#080a13', 900: '#0d1020', 800: '#13172a', 700: '#1d2238', 600: '#262c45' },
+              brand: { 400: '#fb923c', 500: '#f97316', 600: '#ea580c' },
+              ember: { 300: '#fdba74', 400: '#fb923c', 500: '#f97316', 600: '#ea580c' },
+              teal: { 300: '#5eead4', 400: '#2dd4bf', 500: '#14b8a6' },
+              ink: {
+                950: '#070605',
+                900: '#0c0b09',
+                850: '#12100e',
+                800: '#1a1714',
+                700: '#242019',
+                600: '#2e2923',
+              },
             },
             fontFamily: {
-              sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-              mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+              display: ['Syne', 'system-ui', 'sans-serif'],
+              sans: ['DM Sans', 'system-ui', 'sans-serif'],
+              mono: ['IBM Plex Mono', 'ui-monospace', 'monospace'],
+            },
+            animation: {
+              'fade-up': 'fadeUp 0.55s ease-out both',
+              'fade-up-slow': 'fadeUp 0.7s ease-out both',
+            },
+            keyframes: {
+              fadeUp: {
+                '0%': { opacity: '0', transform: 'translateY(12px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
             },
           },
         },
@@ -24,17 +44,31 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@500;600;700;800&display=swap"
       rel="stylesheet"
     />
     <style>
       body {
-        font-feature-settings: 'cv11', 'ss01', 'ss03';
+        position: relative;
+        font-feature-settings: 'ss01' on, 'ss02' on;
         -webkit-font-smoothing: antialiased;
+      }
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.035;
+        z-index: 0;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      }
+      #root {
+        position: relative;
+        z-index: 1;
       }
     </style>
   </head>
-  <body class="bg-ink-950 text-slate-100 font-sans">
+  <body class="relative min-h-screen bg-ink-950 text-slate-100 font-sans">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

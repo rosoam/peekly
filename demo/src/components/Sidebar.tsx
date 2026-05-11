@@ -2,8 +2,8 @@ import { navItems } from '../data';
 
 export function Sidebar() {
   return (
-    <aside className="w-56 shrink-0 border-r border-white/[0.06] bg-ink-900/40 flex flex-col">
-      <nav className="flex flex-col gap-0.5 p-3">
+    <aside className="flex w-56 shrink-0 flex-col border-r border-white/[0.06] bg-ink-900/50">
+      <nav className="flex flex-col gap-1 p-3">
         {navItems.map((item) => (
           <NavItem
             key={item.id}
@@ -14,13 +14,19 @@ export function Sidebar() {
           />
         ))}
       </nav>
-      <div className="mt-auto p-3 border-t border-white/[0.06]">
-        <div className="rounded-lg bg-gradient-to-br from-brand-500/10 to-brand-600/5 border border-brand-500/20 p-3">
-          <div className="text-xs font-semibold text-brand-400 mb-1">Pro tip</div>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Hold <kbd className="px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-300 text-[10px] font-mono">⌥</kbd>{' '}
-            and click any element to peek at its component.
-          </p>
+      <div className="mt-auto border-t border-white/[0.06] p-3">
+        <div className="relative overflow-hidden rounded-xl border border-ember-500/20 bg-gradient-to-br from-ember-500/[0.12] via-ink-850/80 to-teal-500/[0.06] p-3.5">
+          <div className="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-ember-400/20 blur-2xl" aria-hidden />
+          <div className="relative">
+            <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-ember-400/90">Peekly</div>
+            <p className="mt-2 text-xs leading-relaxed text-slate-400">
+              Hold{' '}
+              <kbd className="rounded-md border border-white/[0.1] bg-black/30 px-1.5 py-0.5 font-mono text-[10px] text-slate-300">
+                ⌥
+              </kbd>{' '}
+              and click any element to inspect its component.
+            </p>
+          </div>
         </div>
       </div>
     </aside>
@@ -39,16 +45,23 @@ function NavItem({ label, icon, active, badge }: NavItemProps) {
     <button
       type="button"
       className={
-        'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition ' +
+        'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ' +
         (active
-          ? 'bg-brand-500/15 text-brand-400 font-medium'
-          : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200')
+          ? 'bg-gradient-to-r from-ember-500/20 to-transparent font-medium text-ember-200 ring-1 ring-ember-500/25'
+          : 'text-slate-500 hover:bg-white/[0.04] hover:text-slate-200')
       }
     >
-      <span className={active ? 'text-brand-400' : 'text-slate-500'}>{icon}</span>
+      <span
+        className={
+          'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm ' +
+          (active ? 'bg-ember-500/15 text-ember-300' : 'bg-white/[0.03] text-slate-600')
+        }
+      >
+        {icon}
+      </span>
       <span className="flex-1 text-left">{label}</span>
       {badge != null && (
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-400 font-semibold">
+        <span className="rounded-md bg-ember-500/25 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-ember-200">
           {badge}
         </span>
       )}

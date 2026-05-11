@@ -15,9 +15,10 @@ C_YELLOW='\033[93m'
 
 usage() {
   printf "\n${BOLD}peekly${NC} — CLI développement\n\n"
-  printf "  ${BOLD}${C_GREEN}%-24s${NC}  %s\n" "peekly log \"desc\""   "Ajouter un point au sprint log"
-  printf "  ${BOLD}${C_GREEN}%-24s${NC}  %s\n" "peekly status"         "Voir les items en attente d'analyse"
-  printf "  ${BOLD}${C_GREEN}%-24s${NC}  %s\n" "peekly open"           "Ouvrir le projet dans Finder"
+  printf "  ${BOLD}${C_GREEN}%-28s${NC}  %s\n" "peekly log \"desc\""   "Ajouter un point au sprint log"
+  printf "  ${BOLD}${C_GREEN}%-28s${NC}  %s\n" "peekly log --list"     "Lister tous les points en attente"
+  printf "  ${BOLD}${C_GREEN}%-28s${NC}  %s\n" "peekly status"         "Voir les items en attente d'analyse"
+  printf "  ${BOLD}${C_GREEN}%-28s${NC}  %s\n" "peekly open"           "Ouvrir le projet dans Finder"
   printf "\n"
   printf "  ${C_GRAY}Skills Claude Code : /log-peekly · /sprint-peekly${NC}\n\n"
 }
@@ -25,6 +26,20 @@ usage() {
 case "${1:-help}" in
   log)
     shift
+    if [[ "${1:-}" == "--list" || "${1:-}" == "--liste" ]]; then
+      COUNT=$(grep -c "^- \[ \]" "$SPRINT_LOG" 2>/dev/null || echo 0)
+      printf "\n${BOLD}Peekly Sprint Log${NC} — ${C_YELLOW}%s point(s) en attente${NC}\n\n" "$COUNT"
+      if [[ "$COUNT" -gt 0 ]]; then
+        grep "^- \[ \]" "$SPRINT_LOG" | while IFS= read -r line; do
+          content="${line#- \[ \] }"
+          printf "  ${C_GRAY}·${NC} %s\n" "$content"
+        done
+      else
+        printf "  ${C_GRAY}Aucun point en attente.${NC}\n"
+      fi
+      printf "\n"
+      exit 0
+    fi
     if [[ $# -eq 0 ]]; then
       printf "${C_RED}Usage : peekly log \"description\"${NC}\n" >&2
       exit 1

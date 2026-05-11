@@ -292,65 +292,6 @@ export const overlayCss = `
 .panel-body::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); }
 .panel-body::-webkit-scrollbar-track { background: transparent; }
 
-/* ─── Source card ─────────────────────────────────────────────────── */
-
-.source-card {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(139, 92, 246, 0.06));
-  border: 1px solid rgba(99, 102, 241, 0.32);
-  border-radius: 9px;
-  padding: 12px 12px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.source-card-empty {
-  background: rgba(255, 255, 255, 0.02);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-.source-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.source-card-label {
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  color: rgba(199, 210, 254, 0.6);
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.source-path {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
-  color: #e0e7ff;
-  word-break: break-all;
-  line-height: 1.4;
-  user-select: text;
-  cursor: text;
-}
-
-.source-actions {
-  display: flex;
-  gap: 6px;
-  align-items: stretch;
-}
-
-.source-empty {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.55);
-  line-height: 1.4;
-  padding: 4px 0;
-}
-
-.source-empty-sub {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.35);
-}
-
 /* ─── Buttons ─────────────────────────────────────────────────────── */
 
 .btn {
@@ -669,6 +610,12 @@ export const overlayCss = `
   font-family: ui-monospace, monospace;
   font-size: 11px;
   align-items: baseline;
+  position: relative;
+}
+
+.kv-row:hover > .row-copy {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .kv-key {
@@ -870,14 +817,6 @@ button.owner-row.owner-row-nav:hover .owner-name {
 .owner-src.clickable { cursor: pointer; transition: color 100ms ease; }
 .owner-src.clickable:hover { color: #86efac; text-decoration: underline; }
 
-/* ─── Footer ──────────────────────────────────────────────────────── */
-
-.panel-footer {
-  padding: 10px 14px 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.015);
-}
-
 /* ─── Tooltip (contextual debugger, y + x) ─────────────────────────── */
 
 .tooltip {
@@ -1037,12 +976,6 @@ button.owner-row.owner-row-nav:hover .owner-name {
   padding: 6px 8px;
 }
 
-.tt-clickable { cursor: pointer; transition: background 100ms ease, border-color 100ms ease; }
-.tt-clickable:hover {
-  background: rgba(134, 239, 172, 0.12);
-  border-color: rgba(134, 239, 172, 0.35);
-}
-
 .tt-empty {
   color: rgba(255, 255, 255, 0.4);
   font-style: italic;
@@ -1075,6 +1008,7 @@ button.owner-row.owner-row-nav:hover .owner-name {
   font-family: ui-monospace, monospace;
   font-size: 11px;
   align-items: baseline;
+  position: relative;
 }
 
 .tt-kv-key { color: #fbbf24; font-weight: 500; }
@@ -1389,7 +1323,8 @@ button.owner-row.owner-row-nav:hover .owner-name {
 .tt-row-copy svg { width: 12px; height: 12px; }
 
 .tt-html-attr-wrap:hover .tt-row-copy,
-.tt-attr-row:hover .tt-row-copy {
+.tt-attr-row:hover .tt-row-copy,
+.tt-kv:hover > .tt-row-copy {
   opacity: 1;
   pointer-events: auto;
 }
@@ -1568,5 +1503,59 @@ button.owner-row.owner-row-nav:hover .owner-name {
   color: #86efac;
   border-radius: 4px;
   white-space: nowrap;
+}
+
+/* ─── Panel tabs ─────────────────────────────────────────────────── */
+
+.panel-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 10px 0;
+  background: rgba(255, 255, 255, 0.015);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+
+.panel-tab {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 5px 10px 7px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 100ms, border-color 100ms;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.panel-tab:hover { color: rgba(255, 255, 255, 0.85); }
+
+.panel-tab.active {
+  color: #c7d2fe;
+  border-bottom-color: #6366f1;
+}
+
+.panel-tab-badge {
+  background: #fb7185;
+  color: white;
+  font-size: 9px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-weight: 700;
+  min-width: 14px;
+  text-align: center;
+}
+
+.a11y-ok {
+  color: #86efac;
+  font-size: 12px;
+  padding: 12px 0 8px;
 }
 `;

@@ -41,7 +41,7 @@ const manifest = defineManifest({
       all_frames: true,
     },
   ],
-  permissions: ['storage', 'activeTab'],
+  permissions: ['storage'],
   host_permissions: ['<all_urls>'],
 });
 

@@ -597,6 +597,190 @@ export const netPanelCss = `
   color: var(--np-red);
   border: 1px solid rgba(255,69,58,0.3);
 }
+.np-sb-sens {
+  background: rgba(191,90,242,0.14);
+  color: #d4a5ff;
+  border: 1px solid rgba(191,90,242,0.35);
+}
+
+/* ─── Sensitive field badges (row + overlay) ───────────────────── */
+.np-rr-sensitive {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  border: 1px solid transparent;
+}
+.np-rr-sensitive.np-sens-auth {
+  background: rgba(255,69,58,0.16);
+  color: #ff8c85;
+  border-color: rgba(255,69,58,0.4);
+}
+.np-rr-sensitive.np-sens-financial {
+  background: rgba(255,159,10,0.16);
+  color: #ffb547;
+  border-color: rgba(255,159,10,0.4);
+}
+.np-rr-sensitive.np-sens-pii-high {
+  background: rgba(191,90,242,0.16);
+  color: #d4a5ff;
+  border-color: rgba(191,90,242,0.4);
+}
+.np-rr-sensitive.np-sens-pii-medium {
+  background: rgba(90,200,250,0.14);
+  color: #6fd1f6;
+  border-color: rgba(90,200,250,0.35);
+}
+
+/* Overlay: summary chips + per-finding rows */
+.np-sens-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.np-sens-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.np-sens-chip.np-sens-auth,
+.np-n1-count.np-sens-auth {
+  background: rgba(255,69,58,0.16);
+  color: #ff8c85;
+  border-color: rgba(255,69,58,0.4);
+}
+.np-sens-chip.np-sens-financial,
+.np-n1-count.np-sens-financial {
+  background: rgba(255,159,10,0.16);
+  color: #ffb547;
+  border-color: rgba(255,159,10,0.4);
+}
+.np-sens-chip.np-sens-pii-high,
+.np-n1-count.np-sens-pii-high {
+  background: rgba(191,90,242,0.16);
+  color: #d4a5ff;
+  border-color: rgba(191,90,242,0.4);
+}
+.np-sens-chip.np-sens-pii-medium,
+.np-n1-count.np-sens-pii-medium {
+  background: rgba(90,200,250,0.14);
+  color: #6fd1f6;
+  border-color: rgba(90,200,250,0.35);
+}
+.np-sens-ep-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.np-sens-template {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.np-sens-toggle {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--np-label-2);
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+.np-sens-toggle:hover {
+  background: rgba(255,255,255,0.06);
+  color: var(--np-label);
+}
+.np-sens-copy {
+  background: rgba(99,102,241,0.16);
+  border: 1px solid rgba(99,102,241,0.4);
+  color: #a5b4fc;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.np-sens-copy:hover {
+  background: rgba(99,102,241,0.28);
+  color: #c7d2fe;
+}
+.np-sens-copy.copied {
+  background: rgba(50,215,75,0.2);
+  border-color: rgba(50,215,75,0.45);
+  color: #6ee7a3;
+}
+.np-sens-group.collapsed .np-sens-finding-list { display: none; }
+
+.np-sens-finding-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+.np-sens-finding {
+  display: grid;
+  grid-template-columns: 10px 56px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--np-bg-control);
+  border-radius: 6px;
+  font-size: 11px;
+}
+.np-sens-cat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.np-sens-cat-dot.np-sens-auth { background: #ff8c85; }
+.np-sens-cat-dot.np-sens-financial { background: #ffb547; }
+.np-sens-cat-dot.np-sens-pii-high { background: #d4a5ff; }
+.np-sens-cat-dot.np-sens-pii-medium { background: #6fd1f6; }
+.np-sens-source {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--np-label-3);
+  font-weight: 600;
+}
+.np-sens-path {
+  color: var(--np-label);
+  font-family: ui-monospace, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.np-sens-preview {
+  color: var(--np-label-3);
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* ─── JSON syntax highlighting ──────────────────────────────────── */
 .np-json-key  { color: #5ac8fa; }

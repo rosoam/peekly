@@ -155,14 +155,12 @@ function getComponentName(type: unknown): string {
 }
 
 function extractSource(fiber: Fiber): SourceLocation | null {
-  if (fiber._debugSource) {
-    return {
-      fileName: fiber._debugSource.fileName,
-      lineNumber: fiber._debugSource.lineNumber,
-      columnNumber: fiber._debugSource.columnNumber,
-    };
-  }
-  return null;
+  if (!fiber._debugSource) return null;
+  return {
+    fileName: fiber._debugSource.fileName,
+    lineNumber: fiber._debugSource.lineNumber,
+    columnNumber: fiber._debugSource.columnNumber,
+  };
 }
 
 // ─── Serialization ────────────────────────────────────────────────────

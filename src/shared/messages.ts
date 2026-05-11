@@ -191,18 +191,26 @@ export type SerializedValue =
   | { type: 'circular' }
   | { type: 'error'; message: string };
 
-export type EditorId = 'vscode' | 'cursor' | 'webstorm' | 'sublime' | 'none';
+export type Hotkeys = {
+  inspect: string;
+  network: string;
+};
 
 export type Settings = {
   enabled: boolean;
   autoOnLocalhost: boolean;
-  editor: EditorId;
+  hotkeys: Hotkeys;
+};
+
+export const DEFAULT_HOTKEYS: Hotkeys = {
+  inspect: 'x',
+  network: 'y',
 };
 
 export const DEFAULT_SETTINGS: Settings = {
-  enabled: false,
+  enabled: true,
   autoOnLocalhost: true,
-  editor: 'vscode',
+  hotkeys: { ...DEFAULT_HOTKEYS },
 };
 
 export const SETTINGS_KEY = 'rp-settings';

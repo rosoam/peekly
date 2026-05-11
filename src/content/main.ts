@@ -175,7 +175,6 @@ function previewElementInPage(target: Element | null): void {
 }
 
 const tooltip: TooltipState = createTooltip(shadow, {
-  getEditor: () => state.settings.editor,
   onNavigateToElement: navigateTooltipToElement,
   onPreviewElement: previewElementInPage,
   onCopyText: (text) => {
@@ -321,7 +320,37 @@ function isInsideHost(target: EventTarget | null): boolean {
 function elementUnderCursor(x: number, y: number): Element | null {
   const prev = host.style.pointerEvents;
   host.style.pointerEvents = 'none';
+
   let el = document.elementFromPoint(x, y);
+
+  // Targeted fix for overlay text / dialog content that uses `pointer-events: none`
+  // for design reasons: hit-testing skips them, so we land on the parent card / backdrop.
+  // We walk elementsFromPoint and prefer a deeper element ONLY when it is opted out of
+  // hit-testing AND visually contains the point. This keeps normal cases (button > span)
+  // unchanged because regular elements don't have pointer-events: none.
+  const stack = document.elementsFromPoint?.(x, y) ?? [];
+  if (stack.length > 1) {
+    let best: Element | null = null;
+    let bestDepth = el ? depthOf(el) : -1;
+    for (const cand of stack) {
+      if (host.contains(cand)) continue;
+      if (cand === document.documentElement || cand === document.body) continue;
+      if (cand === el) continue;
+      const cs = window.getComputedStyle(cand);
+      if (cs.pointerEvents !== 'none') continue;
+      if (cs.visibility === 'hidden' || cs.display === 'none') continue;
+      const r = cand.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+      if (x < r.left || x > r.right || y < r.top || y > r.bottom) continue;
+      const d = depthOf(cand);
+      if (d > bestDepth) {
+        best = cand;
+        bestDepth = d;
+      }
+    }
+    if (best) el = best;
+  }
+
   // Pierce open shadow DOMs (web components) so we target the deepest real
   // element rather than the shadow host.
   let depth = 0;
@@ -335,6 +364,16 @@ function elementUnderCursor(x: number, y: number): Element | null {
   if (!el) return null;
   if (host.contains(el)) return null;
   return el;
+}
+
+function depthOf(el: Element): number {
+  let d = 0;
+  let cur: Element | null = el;
+  while (cur && cur.parentElement) {
+    cur = cur.parentElement;
+    d++;
+  }
+  return d;
 }
 
 function clearPanel(): void {
@@ -706,7 +745,6 @@ function showInspectResult(info: ComponentInfo, el: Element | null): void {
   const handle = renderPanel(shadow, {
     info,
     targetEl: el,
-    editor: state.settings.editor,
     onClose: clearPanel,
     onCopy,
     onNavigate,
@@ -926,6 +964,29 @@ function handleContextMenu(ev: MouseEvent): void {
   }
 }
 
+// AltGr on Windows reports as ctrlKey + altKey simultaneously. Detecting it lets us
+// keep firing for plain X / Y on European layouts (and RDP / Windows Server contexts
+// where layout state can spuriously raise modifier flags).
+function hasRealModifier(ev: KeyboardEvent): boolean {
+  const altGraph = ev.getModifierState && ev.getModifierState('AltGraph');
+  if (altGraph) return false;
+  return ev.ctrlKey || ev.metaKey || ev.altKey;
+}
+
+// Configurable hotkey matcher: compares against ev.key (any layout) and ev.code
+// (physical key, for letters/digits). Configured value is normalised to single
+// lowercase character when it comes from popup capture.
+function matchesHotkey(ev: KeyboardEvent, key: string): boolean {
+  if (!key) return false;
+  const k = key.toLowerCase();
+  if (ev.key.toLowerCase() === k) return true;
+  if (k.length === 1 && k >= 'a' && k <= 'z') return ev.code === `Key${k.toUpperCase()}`;
+  if (k.length === 1 && k >= '0' && k <= '9') {
+    return ev.code === `Digit${k}` || ev.code === `Numpad${k}`;
+  }
+  return false;
+}
+
 function handleKeyDown(ev: KeyboardEvent): void {
   if (ev.key === 'Escape') {
     clearPanel();
@@ -941,8 +1002,8 @@ function handleKeyDown(ev: KeyboardEvent): void {
   }
 
   // Network panel toggle works regardless of picker enabled state.
-  if (!isEditingEvent(ev) && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
-    if ((ev.key.toLowerCase() === 'y' || ev.code === 'KeyY') && !ev.repeat) {
+  if (!isEditingEvent(ev) && !hasRealModifier(ev)) {
+    if (matchesHotkey(ev, state.settings.hotkeys.network) && !ev.repeat) {
       if (!state.netPanelHandle?.isInputFocused()) {
         toggleNetPanel();
         return;
@@ -954,9 +1015,9 @@ function handleKeyDown(ev: KeyboardEvent): void {
   // Don't intercept while the user is typing in a form field or composing text.
   if (isEditingEvent(ev)) return;
   // Don't fight native browser/OS shortcuts (e.g. Cmd+X, Ctrl+X).
-  if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+  if (hasRealModifier(ev)) return;
 
-  if ((ev.key.toLowerCase() === 'x' || ev.code === 'KeyX') && !xDown) {
+  if (matchesHotkey(ev, state.settings.hotkeys.inspect) && !xDown) {
     // Unpin any previously-pinned tooltip so it resumes following the cursor.
     if (tooltip.isPinned()) tooltip.setPinned(false);
     xDown = true;
@@ -989,7 +1050,7 @@ function toggleNetPanel(): void {
 }
 
 function handleKeyUp(ev: KeyboardEvent): void {
-  if (ev.key.toLowerCase() === 'x' || ev.code === 'KeyX') {
+  if (matchesHotkey(ev, state.settings.hotkeys.inspect)) {
     xDown = false;
     clearHighlight();
     if (tooltipTargetEl) {

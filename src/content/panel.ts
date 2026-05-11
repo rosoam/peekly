@@ -1,13 +1,13 @@
 import type {
   ComponentInfo,
   ComponentRef,
-  EditorId,
   OwnerInfo,
   SerializedValue,
   SourceLocation,
 } from '../shared/messages';
 
 const PROPS_INITIAL = 8;
+type PanelTab = 'comp' | 'dom' | 'css' | 'a11y';
 
 export type PanelHandle = {
   updateRenderCount(count: number, lastRenderAt: number): void;
@@ -16,7 +16,6 @@ export type PanelHandle = {
 export type RenderPanelOptions = {
   info: ComponentInfo;
   targetEl: Element | null;
-  editor: EditorId;
   onClose: () => void;
   onCopy: (text: string) => void;
   onNavigate: (fiberId: string) => void;
@@ -52,84 +51,23 @@ function formatValue(v: SerializedValue): string {
   }
 }
 
-function editorUrl(editor: EditorId, src: SourceLocation): string | null {
-  const path = src.fileName;
-  const line = src.lineNumber ?? 1;
-  const col = src.columnNumber ?? 1;
-  switch (editor) {
-    case 'vscode':
-      return `vscode://file/${path}:${line}:${col}`;
-    case 'cursor':
-      return `cursor://file/${path}:${line}:${col}`;
-    case 'webstorm':
-      return `webstorm://open?file=${encodeURIComponent(path)}&line=${line}&column=${col}`;
-    case 'sublime':
-      return `subl://open?url=${encodeURIComponent(`file://${path}`)}&line=${line}`;
-    case 'none':
-      return null;
-  }
-}
-
-function editorLabel(editor: EditorId): string {
-  switch (editor) {
-    case 'vscode':
-      return 'VS Code';
-    case 'cursor':
-      return 'Cursor';
-    case 'webstorm':
-      return 'WebStorm';
-    case 'sublime':
-      return 'Sublime';
-    case 'none':
-      return '';
-  }
-}
-
 function pathString(src: SourceLocation): string {
   const line = src.lineNumber != null ? `:${src.lineNumber}` : '';
   const col = src.columnNumber != null ? `:${src.columnNumber}` : '';
   return `${src.fileName}${line}${col}`;
 }
 
-function displayPath(src: SourceLocation): string {
-  const full = pathString(src);
-  const markers = ['/src/', '/app/', '/pages/', '/components/', '/lib/', '/features/'];
-  for (const m of markers) {
-    const idx = full.indexOf(m);
-    if (idx > 0) return full.slice(idx + 1);
+export function selectorOf(el: Element): string {
+  const tag = el.tagName.toLowerCase();
+  const id = el.id ? `#${el.id}` : '';
+  const className = (el.getAttribute('class') ?? '').trim();
+  let cls = '';
+  if (className) {
+    const parts = className.split(/\s+/).filter(Boolean);
+    const joined = '.' + parts.join('.');
+    cls = joined.length > 28 ? joined.slice(0, 27) + '…' : joined;
   }
-  if (full.length <= 70) return full;
-  return '…' + full.slice(-69);
-}
-
-function buildSummary(info: ComponentInfo): string {
-  const lines: string[] = [];
-  lines.push(`${info.name} (${info.kind})`);
-  if (info.source) lines.push(pathString(info.source));
-  else lines.push('(no source — production build)');
-  const propEntries = Object.entries(info.props);
-  if (propEntries.length > 0) {
-    lines.push('');
-    lines.push(`Props (${propEntries.length}):`);
-    for (const [k, v] of propEntries) lines.push(`  ${k}: ${formatValue(v)}`);
-  }
-  if (info.children.length > 0) {
-    lines.push('');
-    lines.push('Children:');
-    for (const c of info.children) {
-      const where = c.source ? ` — ${pathString(c.source)}` : '';
-      lines.push(`  ${c.name}${where}`);
-    }
-  }
-  if (info.ownerChain.length > 0) {
-    lines.push('');
-    lines.push('Rendered by:');
-    for (const o of info.ownerChain) {
-      const where = o.source ? ` — ${pathString(o.source)}` : '';
-      lines.push(`  ${o.name}${where}`);
-    }
-  }
-  return lines.join('\n');
+  return `<${tag}${id}${cls}>`;
 }
 
 // ─── Generic UI helpers ──────────────────────────────────────────────
@@ -176,7 +114,7 @@ function selectElementContents(root: ShadowRoot, el: Element): void {
 const ICON_COPY = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
 const ICON_INSTANCES = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`;
 const ICON_DRAG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/></svg>`;
-const ICON_STYLES = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>`;
+export const ICON_COPY_SM = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
 
 // ─── Drag handling ───────────────────────────────────────────────────
 
@@ -221,7 +159,6 @@ function attachDrag(
 
 type HeaderHandle = {
   el: HTMLElement;
-  setStylesActive(active: boolean): void;
 };
 
 function buildHeader(
@@ -230,7 +167,6 @@ function buildHeader(
   onClose: () => void,
   onCopy: CopyFn,
   onToggleInstances: () => void,
-  onToggleStyles: () => void,
 ): HeaderHandle {
   const header = document.createElement('div');
   header.className = 'panel-header';
@@ -264,9 +200,6 @@ function buildHeader(
   const actions = document.createElement('div');
   actions.className = 'panel-actions';
 
-  const stylesBtn = makeIconBtn(ICON_STYLES, 'Show computed styles & classes', onToggleStyles);
-  actions.append(stylesBtn);
-
   const instancesBtn = makeIconBtn(ICON_INSTANCES, 'Highlight all instances on page', onToggleInstances);
   actions.append(instancesBtn);
 
@@ -277,66 +210,54 @@ function buildHeader(
 
   header.append(dragHandle, title, actions);
 
-  return {
-    el: header,
-    setStylesActive(active: boolean) {
-      stylesBtn.classList.toggle('active', active);
-      stylesBtn.title = active ? 'Back to component view' : 'Show computed styles & classes';
-      stylesBtn.setAttribute(
-        'aria-label',
-        active ? 'Back to component view' : 'Show computed styles & classes',
-      );
-    },
-  };
+  return { el: header };
 }
 
-function buildSourceCard(
-  info: ComponentInfo,
-  editor: EditorId,
-  onCopy: CopyFn,
-): HTMLElement {
-  const card = document.createElement('section');
-  card.className = 'source-card';
+function buildPanelTabs(
+  initialActive: PanelTab,
+  badges: Partial<Record<PanelTab, number>>,
+  onChange: (tab: PanelTab) => void,
+): { el: HTMLElement; setActive: (tab: PanelTab) => void } {
+  const wrap = document.createElement('div');
+  wrap.className = 'panel-tabs';
 
-  if (!info.source) {
-    card.classList.add('source-card-empty');
-    const msg = document.createElement('div');
-    msg.className = 'source-empty';
-    msg.innerHTML =
-      'No source location.<br/><span class="source-empty-sub">Production build, or React JSX dev transform missing.</span>';
-    card.append(msg);
-    return card;
+  const defs: { id: PanelTab; label: string }[] = [
+    { id: 'comp', label: 'Comp' },
+    { id: 'dom', label: 'DOM' },
+    { id: 'css', label: 'CSS' },
+    { id: 'a11y', label: 'A11y' },
+  ];
+
+  const buttons = new Map<PanelTab, HTMLButtonElement>();
+
+  function setActive(tab: PanelTab): void {
+    for (const [id, btn] of buttons) {
+      btn.classList.toggle('active', id === tab);
+    }
   }
 
-  const cardHeader = document.createElement('div');
-  cardHeader.className = 'source-card-header';
-  const cardLabel = document.createElement('span');
-  cardLabel.className = 'source-card-label';
-  cardLabel.textContent = 'SOURCE';
-  cardHeader.append(cardLabel);
-
-  const path = document.createElement('div');
-  path.className = 'source-path';
-  path.textContent = displayPath(info.source);
-  path.title = pathString(info.source);
-
-  const actions = document.createElement('div');
-  actions.className = 'source-actions';
-
-  const url = editor !== 'none' ? editorUrl(editor, info.source) : null;
-  if (url) {
-    const openBtn = makeButton(`Open in ${editorLabel(editor)} →`, 'primary', () => {
-      void chrome.runtime.sendMessage({ kind: 'open-editor', url });
+  for (const def of defs) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'panel-tab';
+    if (def.id === initialActive) btn.classList.add('active');
+    btn.textContent = def.label;
+    const badge = badges[def.id];
+    if (badge != null && badge > 0) {
+      const b = document.createElement('span');
+      b.className = 'panel-tab-badge';
+      b.textContent = String(badge);
+      btn.append(b);
+    }
+    btn.addEventListener('click', () => {
+      setActive(def.id);
+      onChange(def.id);
     });
-    openBtn.classList.add('btn-grow');
-    actions.append(openBtn);
+    buttons.set(def.id, btn);
+    wrap.append(btn);
   }
 
-  const copyBtn = makeButton('Copy path', 'secondary', () => onCopy(pathString(info.source!)));
-  actions.append(copyBtn);
-
-  card.append(cardHeader, path, actions);
-  return card;
+  return { el: wrap, setActive };
 }
 
 function buildNavSection(
@@ -511,6 +432,227 @@ function buildPropRow(key: string, val: SerializedValue, onCopy: CopyFn): HTMLEl
   return row;
 }
 
+// ─── DOM helpers (shared with tooltip) ──────────────────────────────
+
+function buildAttrNode(name: string, value: string, onCopy: CopyFn): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'tt-html-attr-wrap';
+  const row = document.createElement('div');
+  row.className = 'tt-html-attr';
+  const k = document.createElement('span');
+  k.className = 'tt-html-attr-name';
+  k.textContent = name;
+  const eq = document.createElement('span');
+  eq.className = 'tt-html-attr-eq';
+  eq.textContent = '=';
+  const v = document.createElement('span');
+  v.className = 'tt-html-attr-value';
+  v.textContent = value;
+  v.title = value;
+  row.append(k, eq, v);
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'tt-row-copy';
+  copyBtn.title = `Copy ${name}`;
+  copyBtn.innerHTML = ICON_COPY_SM;
+  copyBtn.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    onCopy(value);
+  });
+  wrap.append(row, copyBtn);
+  return wrap;
+}
+
+export function buildOpenTag(el: Element, copyOuterHtml: () => void, onCopy: CopyFn): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'tt-html';
+
+  const head = document.createElement('div');
+  head.className = 'tt-html-head';
+
+  const lt = document.createElement('span');
+  lt.className = 'tt-html-bracket';
+  lt.textContent = '<';
+
+  const tagName = document.createElement('span');
+  tagName.className = 'tt-html-tag';
+  tagName.textContent = el.tagName.toLowerCase();
+
+  head.append(lt, tagName);
+
+  const attrs = Array.from(el.attributes);
+  if (attrs.length === 0) {
+    const close = document.createElement('span');
+    close.className = 'tt-html-bracket';
+    close.textContent = '>';
+    head.append(close);
+    wrap.append(head);
+  } else {
+    wrap.append(head);
+    const attrsList = document.createElement('div');
+    attrsList.className = 'tt-html-attrs';
+    for (const a of attrs) {
+      attrsList.append(buildAttrNode(a.name, a.value, onCopy));
+    }
+    wrap.append(attrsList);
+    const closeRow = document.createElement('div');
+    closeRow.className = 'tt-html-close';
+    closeRow.textContent = '>';
+    wrap.append(closeRow);
+  }
+
+  const copyGroup = document.createElement('div');
+  copyGroup.className = 'tt-html-copy-group';
+
+  const classes = (el.getAttribute('class') ?? '').trim();
+  if (classes) {
+    const copyClsBtn = document.createElement('button');
+    copyClsBtn.type = 'button';
+    copyClsBtn.className = 'tt-html-copy';
+    copyClsBtn.title = 'Copy classes';
+    copyClsBtn.textContent = 'Classes';
+    copyClsBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      onCopy(classes);
+    });
+    copyGroup.append(copyClsBtn);
+  }
+
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'tt-html-copy';
+  copyBtn.title = 'Copy outerHTML';
+  copyBtn.textContent = 'HTML';
+  copyBtn.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    copyOuterHtml();
+  });
+  copyGroup.append(copyBtn);
+  head.append(copyGroup);
+
+  return wrap;
+}
+
+function buildDomSection(
+  el: Element | null,
+  onCopy: CopyFn,
+  navigate: (el: Element) => void,
+): HTMLElement {
+  const section = document.createElement('div');
+
+  if (!el) {
+    const empty = document.createElement('div');
+    empty.className = 'source-empty';
+    empty.textContent = 'No DOM element available.';
+    section.append(empty);
+    return section;
+  }
+
+  if (el.parentElement && el.parentElement !== document.documentElement) {
+    const upRow = document.createElement('button');
+    upRow.type = 'button';
+    upRow.className = 'tt-dom-up';
+    const upArrow = document.createElement('span');
+    upArrow.className = 'tt-dom-up-arrow';
+    upArrow.textContent = '↑';
+    const upSel = document.createElement('span');
+    upSel.className = 'tt-dom-up-sel';
+    upSel.textContent = `parent: ${selectorOf(el.parentElement)}`;
+    upRow.append(upArrow, upSel);
+    upRow.addEventListener('click', () => navigate(el.parentElement!));
+    section.append(upRow);
+  }
+
+  section.append(buildOpenTag(el, () => onCopy(el.outerHTML), onCopy));
+
+  const domAttrs = Array.from(el.attributes);
+  if (domAttrs.length > 0) {
+    const secH = document.createElement('div');
+    secH.className = 'tt-section-h';
+    secH.textContent = `Attributes · ${domAttrs.length}`;
+    section.append(secH);
+
+    const table = document.createElement('table');
+    table.className = 'tt-attr-table';
+    for (const a of domAttrs) {
+      const tr = document.createElement('tr');
+      tr.className = 'tt-attr-row';
+      const tdName = document.createElement('td');
+      tdName.className = 'tt-attr-name';
+      tdName.textContent = a.name;
+      const tdVal = document.createElement('td');
+      tdVal.className = 'tt-attr-val';
+      tdVal.textContent = a.value || '(empty)';
+      tdVal.title = a.value;
+      const tdCopy = document.createElement('td');
+      tdCopy.className = 'tt-attr-copy-cell';
+      const copyBtn = document.createElement('button');
+      copyBtn.type = 'button';
+      copyBtn.className = 'tt-row-copy';
+      copyBtn.title = `Copy ${a.name}`;
+      copyBtn.innerHTML = ICON_COPY_SM;
+      const val = a.value;
+      copyBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        onCopy(val);
+      });
+      tdCopy.append(copyBtn);
+      tr.append(tdName, tdVal, tdCopy);
+      table.append(tr);
+    }
+    section.append(table);
+  }
+
+  if (el.children.length > 0) {
+    const list = document.createElement('div');
+    list.className = 'tt-dom-children';
+    const max = 12;
+    const shown = Array.from(el.children).slice(0, max);
+    for (const child of shown) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'tt-dom-child';
+      const arrow = document.createElement('span');
+      arrow.className = 'tt-dom-child-arrow';
+      arrow.textContent = '↳';
+      const sel = document.createElement('span');
+      sel.className = 'tt-dom-child-sel';
+      sel.textContent = selectorOf(child);
+      row.append(arrow, sel);
+      row.addEventListener('click', () => navigate(child));
+      list.append(row);
+    }
+    if (el.children.length > max) {
+      const more = document.createElement('div');
+      more.className = 'tt-dom-more';
+      more.textContent = `+${el.children.length - max} more`;
+      list.append(more);
+    }
+    section.append(list);
+  } else {
+    const text = (el.textContent ?? '').trim();
+    if (text) {
+      const t = document.createElement('div');
+      t.className = 'tt-dom-text';
+      t.textContent = text.length > 200 ? text.slice(0, 200) + '…' : text;
+      t.title = text;
+      section.append(t);
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'tt-dom-empty';
+      empty.textContent = '(empty)';
+      section.append(empty);
+    }
+  }
+
+  const closeTag = document.createElement('div');
+  closeTag.className = 'tt-html-close-tag';
+  closeTag.textContent = `</${el.tagName.toLowerCase()}>`;
+  section.append(closeTag);
+
+  return section;
+}
+
 // ─── Computed styles section ─────────────────────────────────────────
 
 const COMPUTED_KEYS: { label: string; prop: string; editable: boolean; format?: (v: string) => string }[] = [
@@ -526,6 +668,11 @@ const COMPUTED_KEYS: { label: string; prop: string; editable: boolean; format?: 
   { label: 'border', prop: 'border', editable: true, format: shortenBorder },
   { label: 'radius', prop: 'border-radius', editable: true },
 ];
+
+function shortenFontFamily(v: string): string {
+  const first = v.split(',')[0]?.trim() ?? '';
+  return first.replace(/^["']|["']$/g, '');
+}
 
 function shortenColor(v: string): string {
   if (!v || v === 'rgba(0, 0, 0, 0)') return 'transparent';
@@ -557,7 +704,7 @@ function shortenBorder(v: string): string {
   return v.replace(/\s+/g, ' ').trim();
 }
 
-function buildComputedSection(el: Element): HTMLElement | null {
+function buildComputedSection(el: Element, onCopy: CopyFn): HTMLElement | null {
   if (!el || !(el instanceof HTMLElement)) return null;
   const cs = window.getComputedStyle(el);
   const details = document.createElement('details');
@@ -575,25 +722,28 @@ function buildComputedSection(el: Element): HTMLElement | null {
       body.append(buildEditableCssRow(el, k.prop, k.label, k.format));
       continue;
     }
-    let value = '';
     if (k.label === 'font') {
-      const fs = cs.getPropertyValue('font-size');
-      const fw = cs.getPropertyValue('font-weight');
-      const lh = cs.getPropertyValue('line-height');
-      value = `${fs} / ${lh} · ${fw}`;
-    } else if (k.label === 'size') {
+      // Split font into individually-readable & copiable rows
+      body.append(buildKvRow('font-size', cs.getPropertyValue('font-size'), onCopy));
+      body.append(buildKvRow('line-height', cs.getPropertyValue('line-height'), onCopy));
+      body.append(buildKvRow('font-weight', cs.getPropertyValue('font-weight'), onCopy));
+      body.append(buildKvRow('font-family', shortenFontFamily(cs.getPropertyValue('font-family')), onCopy));
+      continue;
+    }
+    let value = '';
+    if (k.label === 'size') {
       const r = el.getBoundingClientRect();
       value = `${Math.round(r.width)} × ${Math.round(r.height)}px`;
     }
     if (!value) continue;
-    body.append(buildKvRow(k.label, value));
+    body.append(buildKvRow(k.label, value, onCopy));
   }
   body.append(buildAddCssRow(el, 'kv'));
   details.append(body);
   return details;
 }
 
-function buildKvRow(key: string, val: string): HTMLElement {
+function buildKvRow(key: string, val: string, onCopy?: CopyFn): HTMLElement {
   const row = document.createElement('div');
   row.className = 'kv-row';
   const k = document.createElement('span');
@@ -604,6 +754,11 @@ function buildKvRow(key: string, val: string): HTMLElement {
   v.textContent = val;
   v.title = val;
   row.append(k, v);
+  if (onCopy) {
+    const copyBtn = makeIconBtn(ICON_COPY, `Copy ${key}`, () => onCopy(val));
+    copyBtn.classList.add('row-copy');
+    row.append(copyBtn);
+  }
   return row;
 }
 
@@ -927,30 +1082,6 @@ function contrastRatio(
   return (hi + 0.05) / (lo + 0.05);
 }
 
-function buildA11ySection(el: Element | null): HTMLElement | null {
-  const warnings = checkA11y(el);
-  if (warnings.length === 0) return null;
-  const section = document.createElement('section');
-  section.className = 'section section-warn';
-  const heading = document.createElement('h4');
-  heading.className = 'section-title';
-  heading.textContent = `A11y · ${warnings.length}`;
-  section.append(heading);
-  for (const w of warnings) {
-    const row = document.createElement('div');
-    row.className = 'warn-row';
-    const dot = document.createElement('span');
-    dot.className = 'warn-dot';
-    dot.textContent = '⚠';
-    const text = document.createElement('span');
-    text.className = 'warn-text';
-    text.textContent = w;
-    row.append(dot, text);
-    section.append(row);
-  }
-  return section;
-}
-
 // ─── Generic anti-pattern hints ──────────────────────────────────────
 
 function checkHints(info: ComponentInfo, el: Element | null): string[] {
@@ -980,27 +1111,57 @@ function checkHints(info: ComponentInfo, el: Element | null): string[] {
   return hints;
 }
 
-function buildHintsSection(info: ComponentInfo, el: Element | null): HTMLElement | null {
+function buildA11yTabContent(info: ComponentInfo, el: Element | null): HTMLElement {
+  const section = document.createElement('div');
+  const warnings = checkA11y(el);
   const hints = checkHints(info, el);
-  if (hints.length === 0) return null;
-  const section = document.createElement('section');
-  section.className = 'section section-hint';
-  const heading = document.createElement('h4');
-  heading.className = 'section-title';
-  heading.textContent = `Hints · ${hints.length}`;
-  section.append(heading);
-  for (const h of hints) {
-    const row = document.createElement('div');
-    row.className = 'hint-row';
-    const dot = document.createElement('span');
-    dot.className = 'hint-dot';
-    dot.textContent = '◆';
-    const text = document.createElement('span');
-    text.className = 'hint-text';
-    text.textContent = h;
-    row.append(dot, text);
-    section.append(row);
+
+  if (warnings.length === 0 && hints.length === 0) {
+    const ok = document.createElement('div');
+    ok.className = 'a11y-ok';
+    ok.textContent = '✓ No accessibility issues detected';
+    section.append(ok);
+    return section;
   }
+
+  if (warnings.length > 0) {
+    const heading = document.createElement('h4');
+    heading.className = 'section-title';
+    heading.textContent = `A11y · ${warnings.length}`;
+    section.append(heading);
+    for (const w of warnings) {
+      const row = document.createElement('div');
+      row.className = 'warn-row';
+      const dot = document.createElement('span');
+      dot.className = 'warn-dot';
+      dot.textContent = '⚠';
+      const text = document.createElement('span');
+      text.className = 'warn-text';
+      text.textContent = w;
+      row.append(dot, text);
+      section.append(row);
+    }
+  }
+
+  if (hints.length > 0) {
+    const heading = document.createElement('h4');
+    heading.className = 'section-title';
+    heading.textContent = `Hints · ${hints.length}`;
+    section.append(heading);
+    for (const h of hints) {
+      const row = document.createElement('div');
+      row.className = 'hint-row';
+      const dot = document.createElement('span');
+      dot.className = 'hint-dot';
+      dot.textContent = '◆';
+      const text = document.createElement('span');
+      text.className = 'hint-text';
+      text.textContent = h;
+      row.append(dot, text);
+      section.append(row);
+    }
+  }
+
   return section;
 }
 
@@ -1008,7 +1169,6 @@ function buildHintsSection(info: ComponentInfo, el: Element | null): HTMLElement
 
 function buildOwnerSection(
   info: ComponentInfo,
-  editor: EditorId,
   onNavigate: NavigateFn,
   onChipHover: ChipHoverFn,
 ): HTMLElement | null {
@@ -1021,14 +1181,13 @@ function buildOwnerSection(
   heading.textContent = 'Rendered by';
   section.append(heading);
   for (const owner of info.ownerChain) {
-    section.append(buildOwnerRow(owner, editor, onNavigate, onChipHover));
+    section.append(buildOwnerRow(owner, onNavigate, onChipHover));
   }
   return section;
 }
 
 function buildOwnerRow(
   owner: OwnerInfo,
-  editor: EditorId,
   onNavigate: NavigateFn,
   onChipHover: ChipHoverFn,
 ): HTMLElement {
@@ -1061,33 +1220,12 @@ function buildOwnerRow(
     const src = document.createElement('span');
     src.className = 'owner-src';
     src.textContent = `${file}${line}`;
-    if (editor !== 'none') {
-      const url = editorUrl(editor, owner.source);
-      if (url) {
-        src.classList.add('clickable');
-        src.title = `Open ${pathString(owner.source)} in ${editorLabel(editor)}`;
-        src.addEventListener('click', (ev) => {
-          ev.stopPropagation();
-          chrome.runtime.sendMessage({ kind: 'open-editor', url });
-        });
-      }
-    }
+    src.title = pathString(owner.source);
     main.append(src);
   }
 
   row.append(arrow, main);
   return row;
-}
-
-// ─── Footer ──────────────────────────────────────────────────────────
-
-function buildFooter(info: ComponentInfo, onCopy: CopyFn): HTMLElement {
-  const footer = document.createElement('div');
-  footer.className = 'panel-footer';
-  const copyAll = makeButton('Copy all', 'ghost', () => onCopy(buildSummary(info)));
-  copyAll.classList.add('btn-full');
-  footer.append(copyAll);
-  return footer;
 }
 
 // ─── Main render ─────────────────────────────────────────────────────
@@ -1098,7 +1236,6 @@ export function renderPanel(root: ShadowRoot, opts: RenderPanelOptions): PanelHa
   const {
     info,
     targetEl,
-    editor,
     onClose,
     onCopy,
     onNavigate,
@@ -1110,39 +1247,71 @@ export function renderPanel(root: ShadowRoot, opts: RenderPanelOptions): PanelHa
 
   const panel = document.createElement('div');
   panel.className = 'panel';
-  // Hovering anywhere outside the nav section should clear the preview highlight.
   panel.addEventListener('mouseleave', () => onChipHover(null));
 
   const renderSection = buildRenderSection();
 
-  let viewMode: 'base' | 'styles' = 'base';
+  let currentDomEl: Element | null = targetEl;
+  let activeTab: PanelTab = 'comp';
+
+  const a11yCount = checkA11y(targetEl).length + checkHints(info, targetEl).length;
+  const tabsHandle = buildPanelTabs(
+    activeTab,
+    { a11y: a11yCount > 0 ? a11yCount : undefined },
+    (tab) => {
+      activeTab = tab;
+      const newBody = buildBody();
+      body.replaceWith(newBody);
+      body = newBody;
+    },
+  );
 
   function buildBody(): HTMLElement {
     const b = document.createElement('div');
     b.className = 'panel-body';
-    if (viewMode === 'base') {
-      b.append(buildSourceCard(info, editor, onCopy));
-      const navSection = buildNavSection(info, onNavigate, onChipHover);
-      if (navSection) b.append(navSection);
-      b.append(renderSection.section);
-      const propsSection = buildPropsSection(info, onCopy);
-      if (propsSection) b.append(propsSection);
-      const a11ySection = buildA11ySection(targetEl);
-      if (a11ySection) b.append(a11ySection);
-      const hintsSection = buildHintsSection(info, targetEl);
-      if (hintsSection) b.append(hintsSection);
-      const ownerSection = buildOwnerSection(info, editor, onNavigate, onChipHover);
-      if (ownerSection) b.append(ownerSection);
-    } else {
-      const computedSection = buildComputedSection(targetEl ?? document.body);
-      if (computedSection) {
-        computedSection.setAttribute('open', '');
-        b.append(computedSection);
+    switch (activeTab) {
+      case 'comp': {
+        const navSection = buildNavSection(info, onNavigate, onChipHover);
+        if (navSection) b.append(navSection);
+        b.append(renderSection.section);
+        const propsSection = buildPropsSection(info, onCopy);
+        if (propsSection) b.append(propsSection);
+        const ownerSection = buildOwnerSection(info, onNavigate, onChipHover);
+        if (ownerSection) b.append(ownerSection);
+        break;
       }
-      const tailwindSection = buildTailwindSection(targetEl);
-      if (tailwindSection) {
-        tailwindSection.setAttribute('open', '');
-        b.append(tailwindSection);
+      case 'dom': {
+        b.append(
+          buildDomSection(currentDomEl, onCopy, (el) => {
+            currentDomEl = el;
+            const newBody = buildBody();
+            body.replaceWith(newBody);
+            body = newBody;
+          }),
+        );
+        break;
+      }
+      case 'css': {
+        const cssEl = currentDomEl instanceof HTMLElement
+          ? currentDomEl
+          : targetEl instanceof HTMLElement ? targetEl : null;
+        if (cssEl) {
+          const computedSection = buildComputedSection(cssEl, onCopy);
+          if (computedSection) {
+            computedSection.setAttribute('open', '');
+            b.append(computedSection);
+          }
+        }
+        const tailwindSection = buildTailwindSection(currentDomEl ?? targetEl);
+        if (tailwindSection) {
+          tailwindSection.setAttribute('open', '');
+          b.append(tailwindSection);
+        }
+        break;
+      }
+      case 'a11y': {
+        b.append(buildA11yTabContent(info, currentDomEl ?? targetEl));
+        break;
       }
     }
     return b;
@@ -1150,16 +1319,8 @@ export function renderPanel(root: ShadowRoot, opts: RenderPanelOptions): PanelHa
 
   let body = buildBody();
 
-  function toggleStyles(): void {
-    viewMode = viewMode === 'base' ? 'styles' : 'base';
-    const newBody = buildBody();
-    body.replaceWith(newBody);
-    body = newBody;
-    headerHandle.setStylesActive(viewMode === 'styles');
-  }
-
-  const headerHandle = buildHeader(root, info, onClose, onCopy, onToggleInstances, toggleStyles);
-  panel.append(headerHandle.el, body, buildFooter(info, onCopy));
+  const headerHandle = buildHeader(root, info, onClose, onCopy, onToggleInstances);
+  panel.append(headerHandle.el, tabsHandle.el, body);
   attachDrag(panel, headerHandle.el, onPositionChange);
 
   if (initialPosition) {
